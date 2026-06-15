@@ -1,6 +1,6 @@
 {
   "name": "@galvanized-pukeko/vue-ui",
-  "version": "0.0.13",
+  "version": "0.0.16",
   "description": "Vue 3 component library that lets an LLM agent render real UI — chat, forms, charts, tables and interactive A2UI surfaces — over the AG-UI protocol.",
   "author": "Andrew Kondratev",
   "license": "MIT",
@@ -52,7 +52,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ag-ui/client": "^0.0.53",
+    "@ag-ui/client": "^0.0.56",
     "chart.js": "^4.5.1",
     "vue": "^3.5.12"
   },
@@ -64,6 +64,6 @@
     "@vue/language-core": "~3.1.5",
     "typescript": "^5.9.3",
     "unplugin-dts": "^1.0.1",
-    "vite": "^7.3.5"
+    "vite": "^8.0.16"
   }
 }

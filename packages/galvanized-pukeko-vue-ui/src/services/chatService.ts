@@ -4,6 +4,12 @@ import { HttpAgent } from '@ag-ui/client'
 import type { AgentSubscriber } from '@ag-ui/client'
 import type { Message, UserMessage, Tool } from '@ag-ui/client'
 
+// @ag-ui/client (>=0.0.54) stores the fetch impl as `this.fetch` and invokes it
+// as a method, which detaches the global `fetch` from its `window` receiver and
+// throws "Illegal invocation" in browsers (Node is lenient, so it only fails in
+// the UI). Hand HttpAgent an explicitly-bound fetch so the receiver is correct.
+const boundFetch: typeof fetch = (...args) => globalThis.fetch(...args)
+
 // Run-state machine. Surfaces the silent gap between TOOL_CALL_RESULT and the
 // next REASONING_MESSAGE_START so the UI can show a progress indicator.
 export type RunState = 'idle' | 'streaming' | 'running-tool' | 'waiting'
@@ -115,8 +121,12 @@ function buildSubscriber(callbacks: ChatCallbacks): AgentSubscriber {
       currentThinkingPart.text = reasoningMessageBuffer
       emit()
     },
-    onReasoningMessageEndEvent() {
+    onReasoningMessageEndEvent({ reasoningMessageBuffer }) {
       if (currentThinkingPart) {
+        // Same one-delta lag as text (see onTextMessageEndEvent): the streamed
+        // reasoningMessageBuffer trails by one delta, and the END event carries
+        // the fully-accumulated value. Flush it so thinking isn't clipped.
+        currentThinkingPart.text = reasoningMessageBuffer
         currentThinkingPart.done = true
         currentThinkingPart = null
         emit()
@@ -130,7 +140,16 @@ function buildSubscriber(callbacks: ChatCallbacks): AgentSubscriber {
       currentTextPart.text = textMessageBuffer
       emit()
     },
-    onTextMessageEndEvent() {
+    onTextMessageEndEvent({ textMessageBuffer }) {
+      // AG-UI delivers `textMessageBuffer` to onTextMessageContentEvent *before*
+      // appending the current delta (the same one-delta lag the tool-call args
+      // path documents in onToolCallEndEvent). The streamed text part therefore
+      // always trails one delta behind; the END event carries the fully
+      // accumulated text. Flush it so the finalized bubble keeps its last
+      // token(s) — otherwise every assistant reply is clipped at the end.
+      if (currentTextPart) {
+        currentTextPart.text = textMessageBuffer
+      }
       currentTextPart = null
       emit()
     },
@@ -334,6 +353,7 @@ class ChatService {
       const config = configService.get()
       this.agent = new HttpAgent({
         url: config.agUiUrl,
+        fetch: boundFetch,
       })
     }
     return this.agent
@@ -349,6 +369,7 @@ class ChatService {
     const config = configService.get()
     this.agent = new HttpAgent({
       url: config.agUiUrl,
+      fetch: boundFetch,
     })
   }
 
@@ -510,4 +531,7 @@ class ChatService {
 }
 
 export const chatService = new ChatService()
-export type { Message }
+// Re-export the @ag-ui/client types that are part of this library's public API
+// (chatService.sendMessage takes `Tool[]`; messages are `Message`/`UserMessage`)
+// so consumers depend on vue-ui rather than reaching past it to @ag-ui/client.
+export type { Message, Tool, UserMessage }

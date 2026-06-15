@@ -46,4 +46,4 @@ export {
 }
 
 export { runState, statusText, chatService } from './services/chatService'
-export type { RunState } from './services/chatService'
+export type { RunState, Message, Tool, UserMessage } from './services/chatService'
