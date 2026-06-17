@@ -20,6 +20,10 @@
 import { shallowRef } from 'vue'
 import { CopilotKitProvider, CopilotChat, HttpAgent } from '@copilotkit/vue/v2'
 import { configService } from '@galvanized-pukeko/vue-ui'
+// P2b increment 2: register the A2UI tool renderer so agent-driven A2UI
+// surfaces render inside the stock chat thread. Must be a descendant of
+// CopilotKitProvider (useRenderTool needs the injected CopilotKit context).
+import StockA2UISurface from './StockA2UISurface.vue'
 
 // Agent id "default" matches AG-UI's `/agents/default/run` path and
 // CopilotKit's DEFAULT_AGENT_ID, so CopilotChat resolves it without an
@@ -31,6 +35,7 @@ const selfManagedAgents = { default: agent.value }
 
 <template>
   <CopilotKitProvider :self-managed-agents="selfManagedAgents">
+    <StockA2UISurface />
     <div class="stock-chat-app">
       <CopilotChat />
     </div>

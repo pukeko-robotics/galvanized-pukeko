@@ -1,7 +1,8 @@
 # CopilotKit Vue integration (P2b) — WIP plan
 
-> Status: **in progress.** Increment 1 (stock-UI mode, AG-UI direct) landed; the
-> rest is planned below. This is the working note for graph node **P2b**
+> Status: **in progress.** Increments 1 (stock-UI mode, AG-UI direct) and 2
+> (A2UI in stock UI) landed; the rest is planned below. This is the working note
+> for graph node **P2b**
 > ("CopilotKit Vue integration — vue-ui 1.0, headless UI, stock UI, A2UI, e2e").
 
 ## Goal
@@ -60,7 +61,7 @@ through the bespoke `ChatInterface` path.
 | # | Increment | State |
 |---|-----------|-------|
 | 1 | **Stock-UI mode**: `CopilotKitProvider` + `CopilotChat` wired to our AG-UI `HttpAgent`; selectable from the web-client; builds. | **done (this commit)** |
-| 2 | **A2UI in stock UI**: feed our A2UI catalog into the provider's `a2ui` prop (or bridge to `A2UIRenderer.vue`); render agent surfaces inside CopilotKit chat. | todo |
+| 2 | **A2UI in stock UI**: bridge to `A2UIRenderer.vue` via `useRenderTool` — render the agent's `show_a2ui_surface` surfaces inside CopilotKit chat using our existing A2UI processor + catalog. | **done** |
 | 3 | **Headless mode**: drive the bespoke Pukeko components (`PkForm`, charts, webcam client-tool) from CopilotKit composables; reconcile client-tool interrupt/resume with `chatService.runLoop`. | todo |
 | 4 | **vue-ui 1.0 shell**: promote the chosen mode(s) into `@galvanized-pukeko/vue-ui`'s public API behind a config flag (`uiMode: 'bespoke' | 'stock' | 'headless'`); cut the 1.0 release. | todo |
 | 5 | **e2e**: Playwright specs for stock + headless against both gaunt-sloth and ADK backends; wire into `it-gth-ag-ui` / `it-adk`. | todo |
@@ -83,6 +84,31 @@ through the bespoke `ChatInterface` path.
 - `packages/galvanized-pukeko-web-client/src/main.ts` — chooses `App` vs
   `StockChatApp` from a `?ui=stock` query flag (default stays bespoke).
 - `@copilotkit/vue@1.60.1` added to the web-client's deps.
+
+## Where increment 2 lives
+
+- `packages/galvanized-pukeko-web-client/src/StockA2UISurface.vue` — registers a
+  CopilotKit `useRenderTool` renderer for `show_a2ui_surface`. On tool-call
+  completion it parses the JSONL `result` with `parseA2UIJsonl` and renders the
+  resulting surfaces through the **shared** `A2UISurface` component + `useA2UI`
+  processor (one processor instance per `toolCallId`).
+- `packages/galvanized-pukeko-web-client/src/StockChatApp.vue` — mounts
+  `<StockA2UISurface />` inside `CopilotKitProvider` (the hook needs the injected
+  CopilotKit context).
+- `@galvanized-pukeko/vue-ui` now publicly exports the A2UI bridge
+  (`A2UISurface`, `A2UIRenderer`, `useA2UI`, `parseA2UIJsonl`, `A2UIContextKey`
+  + types) so the host app reuses the bespoke A2UI renderer rather than
+  duplicating one. `parseA2UIJsonl` was factored out of `ChatInterface.vue`'s
+  inline brace-matcher so both paths parse the wire identically.
+- `zod` added to the web-client deps (used to satisfy `useRenderTool`'s
+  StandardSchema `parameters`).
+
+**Scope of inc 2: display.** Agent surfaces render inside the stock chat thread.
+Interactive A2UI *actions* (a Button submitting back) flow through `useA2UI`'s
+`sendAction`, which resumes via the bespoke `chatService` tool-result wire;
+in stock mode no `pendingToolCallId` is set on that path, so submit-back is a
+deliberate no-op until **increment 3** reconciles client-tool interrupt/resume
+with CopilotKit's own `useFrontendTool` / `use-interrupt`.
 
 ## Open questions / decisions
 

@@ -309,6 +309,37 @@ class SimpleA2UIProcessor {
   }
 }
 
+// --- Shared JSONL parser ---
+
+/**
+ * Parse the concatenated-JSON-object payload emitted as the result of a
+ * `show_a2ui_surface` tool call into an array of A2UI server-to-client
+ * messages. The payload is a stream of top-level `{...}` objects (not a JSON
+ * array), so we brace-match rather than `JSON.parse` the whole thing.
+ *
+ * Shared by the bespoke `ChatInterface` and the CopilotKit stock-UI bridge so
+ * both parse the wire identically (P2b increment 2).
+ */
+export function parseA2UIJsonl(content: string): ServerToClientMessage[] {
+  const messages: ServerToClientMessage[] = []
+  let depth = 0
+  let start = -1
+  for (let i = 0; i < content.length; i++) {
+    const c = content[i]
+    if (c === '{') {
+      if (depth === 0) start = i
+      depth++
+    } else if (c === '}') {
+      depth--
+      if (depth === 0 && start !== -1) {
+        messages.push(JSON.parse(content.slice(start, i + 1)))
+        start = -1
+      }
+    }
+  }
+  return messages
+}
+
 // --- UserAction type ---
 export interface UserAction {
   actionName: string

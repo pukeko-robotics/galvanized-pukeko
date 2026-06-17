@@ -47,3 +47,13 @@ export {
 
 export { runState, statusText, chatService } from './services/chatService'
 export type { RunState, Message, Tool, UserMessage } from './services/chatService'
+
+// A2UI bridge — exported so host apps (e.g. the CopilotKit stock-UI mode in the
+// web-client) can render agent-driven A2UI surfaces using the same processor
+// and component catalog as the bespoke UI. See briefs/copilotkit-vue/PLAN.md
+// (P2b increment 2).
+import A2UISurface from './components/a2ui/A2UISurface.vue'
+import A2UIRenderer from './components/a2ui/A2UIRenderer.vue'
+export { A2UISurface, A2UIRenderer }
+export { useA2UI, A2UIContextKey, parseA2UIJsonl } from './composables/useA2UI'
+export type { Surface, AnyComponentNode, A2UIContext, UserAction } from './composables/useA2UI'
