@@ -4,24 +4,35 @@ import { createApp, type Component } from 'vue'
 
 import { configService } from '@galvanized-pukeko/vue-ui'
 
-// UI mode selection (P2b). Default is the bespoke Pukeko UI; `?ui=stock`
-// selects the CopilotKit stock-UI mode (CopilotChat over our AG-UI backend).
-// See briefs/copilotkit-vue/PLAN.md.
-async function resolveApp(): Promise<Component> {
+// UI mode selection (P2b). Default is the bespoke Pukeko UI; `?ui=stock` selects
+// CopilotKit's CopilotChat and `?ui=headless` selects the bespoke-styled chat
+// driven by CopilotKit composables — both over our AG-UI backend (no CopilotKit
+// cloud runtime). The CopilotKit modes are served by the vue-ui `/copilot`
+// sub-export (PukekoCopilot shell), loaded lazily so the bespoke build doesn't
+// pull in @copilotkit/vue. See briefs/copilotkit-vue/PLAN.md.
+type UiMode = 'bespoke' | 'stock' | 'headless'
+
+function resolveMode(): UiMode {
     const mode = new URLSearchParams(window.location.search).get('ui')
-    if (mode === 'stock') {
-        // CopilotKit's stylesheet is only needed in stock mode; load it lazily
-        // so the bespoke build doesn't pull it in.
-        await import('@copilotkit/vue/styles.css')
-        return (await import('./StockChatApp.vue')).default
+    return mode === 'stock' || mode === 'headless' ? mode : 'bespoke'
+}
+
+async function resolveApp(mode: UiMode): Promise<Component> {
+    if (mode === 'bespoke') {
+        return (await import('./App.vue')).default
     }
-    return (await import('./App.vue')).default
+    // CopilotKit's stylesheet + the /copilot bundle are only needed for the
+    // CopilotKit-backed modes; load them lazily.
+    await import('@copilotkit/vue/styles.css')
+    await import('@galvanized-pukeko/vue-ui/copilot/style.css')
+    return (await import('./CopilotApp.vue')).default
 }
 
 async function init() {
     await configService.load()
-    const App = await resolveApp()
-    createApp(App).mount('#app')
+    const mode = resolveMode()
+    const App = await resolveApp(mode)
+    createApp(App, mode === 'bespoke' ? {} : { uiMode: mode }).mount('#app')
 }
 
 init()

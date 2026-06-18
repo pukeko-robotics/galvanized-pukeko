@@ -28,9 +28,17 @@ export default defineConfig({
     emptyOutDir: true
   },
   resolve: {
+    // NOTE: order matters — the more specific subpath aliases (incl. the
+    // /copilot sub-export, P2b) must precede the bare package alias, which is a
+    // prefix match. In dev we consume the vue-ui SOURCE directly (no build
+    // step). The CopilotKit modes' CSS comes from component <style> blocks +
+    // global.css, so /copilot/style.css maps to global.css here; the published
+    // package serves the built dist/copilot.css via its exports map.
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@galvanized-pukeko/vue-ui/style.css': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/assets/global.css', import.meta.url)),
+      '@galvanized-pukeko/vue-ui/copilot/style.css': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/assets/global.css', import.meta.url)),
+      '@galvanized-pukeko/vue-ui/copilot': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/copilot.ts', import.meta.url)),
       '@galvanized-pukeko/vue-ui': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src', import.meta.url))
     },
     preserveSymlinks: true

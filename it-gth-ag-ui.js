@@ -102,7 +102,16 @@ try {
   exitCode = await new Promise(resolve => {
     const testProc = spawn(
       'npx',
-      ['playwright', 'test', 'e2e/chat-gth.spec.ts', ...playwrightArgs],
+      [
+        'playwright',
+        'test',
+        // Bespoke UI + the two CopilotKit modes (P2b: stock + headless), all
+        // against the same live Gaunt Sloth AG-UI backend.
+        'e2e/chat-gth.spec.ts',
+        'e2e/chat-gth-stock.spec.ts',
+        'e2e/chat-gth-headless.spec.ts',
+        ...playwrightArgs,
+      ],
       { cwd: __dirname, stdio: 'inherit' }
     );
     testProc.on('close', resolve);
