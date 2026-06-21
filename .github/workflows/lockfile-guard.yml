@@ -1,0 +1,37 @@
+name: lockfile-guard
+
+# OPS-4: fail CI if any tracked package-lock.json pins a local Verdaccio
+# registry (localhost:4873 / 127.0.0.1:4873).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verdaccio-leak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check lockfiles for Verdaccio/localhost registry leaks
+        shell: bash
+        run: |
+          locks=$(git ls-files '*package-lock.json')
+          if [ -z "$locks" ]; then
+            echo "No package-lock.json files tracked; nothing to check."
+            exit 0
+          fi
+          status=0
+          for f in $locks; do
+            if grep -Eq 'localhost:4873|127\.0\.0\.1:4873' "$f"; then
+              echo "ERROR: $f resolves packages from a local Verdaccio registry (localhost:4873 / 127.0.0.1:4873)."
+              status=1
+            fi
+          done
+          if [ "$status" -ne 0 ]; then
+            echo
+            echo "A committed package-lock.json must not pin a local Verdaccio registry."
+            echo "Re-install against the public registry to regenerate the lockfile,"
+            echo "or use 'npm run use:local <pkg>' to install from Verdaccio without writing the lockfile."
+            exit 1
+          fi
+          echo "OK: no Verdaccio/localhost registry leaks found."

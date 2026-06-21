@@ -13,6 +13,8 @@
   "bugs": "https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/issues",
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "use:local": "npm install --registry http://localhost:4873 --no-package-lock --no-save",
     "web": "npm run dev -w packages/galvanized-pukeko-web-client",
     "web-ag-ui": "AGUI_URL=http://localhost:3000/agents/default/run npm run dev -w packages/galvanized-pukeko-web-client",
     "sink": "npm run sink -w packages/galvanized-pukeko-web-client",

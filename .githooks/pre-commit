@@ -1,0 +1,35 @@
+#!/bin/sh
+# OPS-4 Verdaccio lockfile-leak guard.
+# Blocks any commit whose staged package-lock.json resolves packages from a
+# local Verdaccio registry (localhost:4873 / 127.0.0.1:4873). Such a lockfile
+# is non-portable and points teammates/CI at a dev-only registry.
+
+set -e
+
+staged_locks=$(git diff --cached --name-only --diff-filter=ACM | grep 'package-lock\.json' || true)
+
+[ -z "$staged_locks" ] && exit 0
+
+found=0
+for f in $staged_locks; do
+  # Inspect the STAGED content, not the working tree.
+  if git show ":$f" | grep -Eq 'localhost:4873|127\.0\.0\.1:4873'; then
+    echo "ERROR: $f resolves packages from a local Verdaccio registry (localhost:4873 / 127.0.0.1:4873)." >&2
+    found=1
+  fi
+done
+
+if [ "$found" -ne 0 ]; then
+  echo >&2
+  echo "OPS-4 Verdaccio lockfile-leak guard blocked this commit." >&2
+  echo "A package-lock.json must not pin a local Verdaccio registry." >&2
+  echo >&2
+  echo "Fix:" >&2
+  echo "  - Re-install against the public registry so the lockfile is regenerated cleanly:" >&2
+  echo "      npm install --registry https://registry.npmjs.org" >&2
+  echo "  - To install a package FROM Verdaccio without touching the lockfile, use:" >&2
+  echo "      npm run use:local <pkg>   (passes --no-package-lock --no-save)" >&2
+  exit 1
+fi
+
+exit 0
