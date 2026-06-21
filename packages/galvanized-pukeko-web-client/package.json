@@ -6,7 +6,7 @@
     "test": "vitest run",
     "dev": "vite",
     "sink": "vite --open /sink/",
-    "build": "npm run type-check && npm run build-only",
+    "build": "pnpm run type-check && pnpm run build-only",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
@@ -21,8 +21,9 @@
   "description": "Thin host app that mounts @galvanized-pukeko/vue-ui — the dev server and the build embedded by the ADK agent.",
   "dependencies": {
     "@copilotkit/vue": "^1.60.1",
-    "@galvanized-pukeko/vue-ui": "^0.0.16",
+    "@galvanized-pukeko/vue-ui": "workspace:*",
     "chart.js": "^4.5.1",
+    "vue": "^3.5.12",
     "zod": "^3.25.76"
   }
 }

@@ -40,8 +40,14 @@ export default defineConfig({
       '@galvanized-pukeko/vue-ui/copilot/style.css': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/assets/global.css', import.meta.url)),
       '@galvanized-pukeko/vue-ui/copilot': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/copilot.ts', import.meta.url)),
       '@galvanized-pukeko/vue-ui': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src', import.meta.url))
-    },
-    preserveSymlinks: true
+    }
+    // NOTE (OPS-6): `preserveSymlinks: true` was removed during the pnpm
+    // migration. Under pnpm's symlinked store it kept the symlinked path for
+    // `vue`, so rolldown could not follow vue's nested `@vue/runtime-dom`
+    // (resolved against the symlink dir, not the real `.pnpm` dir), failing the
+    // production build. Default (false) lets resolution reach the real store
+    // path where the sibling `@vue/*` packages live. The `@galvanized-pukeko/
+    // vue-ui` source aliases above keep dev consuming the lib source directly.
   },
   server: {
     port: 5555

@@ -3,8 +3,8 @@ set -e
 
 # Build the web client
 echo "Building web client..."
-npm install
-npm run build
+pnpm install
+pnpm run build
 
 # Define paths
 SOURCE_DIR="dist/client"

@@ -1,0 +1,15 @@
+packages:
+  - 'packages/galvanized-pukeko-vue-ui'
+  - 'packages/galvanized-pukeko-web-client'
+
+# Cross-repo interop (OPS-6): @gaunt-sloth/agent is consumed via a relative
+# file: dep from a *sibling* repo. Its own package.json declares
+# @gaunt-sloth/core as `workspace:*`, which is only resolvable inside
+# gaunt-sloth's own pnpm workspace — not here. These overrides replace the
+# `workspace:*` specifier with the sibling file: path before resolution, so the
+# transitive @gaunt-sloth/core resolves to ../gaunt-sloth/packages/core.
+# (pnpm 11 reads overrides from this file, not package.json's "pnpm" field.)
+overrides:
+  uuid: '>=11.1.1'
+  '@gaunt-sloth/agent': 'file:../gaunt-sloth/packages/agent'
+  '@gaunt-sloth/core': 'file:../gaunt-sloth/packages/core'
