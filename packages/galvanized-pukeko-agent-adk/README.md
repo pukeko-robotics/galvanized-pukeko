@@ -115,8 +115,8 @@ If you have checked out the [monorepo](../../README.md), you can start the agent
 web-client dev server, or run the end-to-end tests, from the repo root:
 
 ```bash
-npm run start-adk      # ADK agent on :8080 + web client dev server on :5555
-npm run it-adk         # ADK end-to-end tests (add it-adk-headed for a visible browser)
+pnpm run start-adk      # ADK agent on :8080 + web client dev server on :5555
+pnpm run it-adk         # ADK end-to-end tests (add it-adk-headed for a visible browser)
 ```
 
 After changing the Vue UI, rebuild and re-embed the client with `./deploy-to-adk.sh` (see

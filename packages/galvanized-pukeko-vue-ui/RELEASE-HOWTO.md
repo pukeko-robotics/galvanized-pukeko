@@ -19,7 +19,7 @@ git difftool @galvanized-pukeko/vue-ui@0.0.1 HEAD -- packages/galvanized-pukeko-
 ## 2. Build
 
 ```bash
-npm run build -w @galvanized-pukeko/vue-ui
+pnpm --filter @galvanized-pukeko/vue-ui run build
 ```
 
 ## 3. Version and tag

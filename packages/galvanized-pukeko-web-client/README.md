@@ -17,14 +17,14 @@ server embeds, and (b) a runnable reference for the
 ## Run
 
 ```bash
-npm install
-npm run dev        # http://localhost:5555
+pnpm install
+pnpm run dev        # http://localhost:5555
 ```
 
 Point it at an AG-UI server (Gaunt Sloth or the ADK agent) by setting `AGUI_URL`:
 
 ```bash
-AGUI_URL=http://localhost:3000/agents/default/run npm run dev
+AGUI_URL=http://localhost:3000/agents/default/run pnpm run dev
 ```
 
 Without `AGUI_URL`, the app fetches `/config.json` at runtime instead — see the vue-ui
@@ -49,10 +49,10 @@ createApp(App).mount('#app')
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Dev server on `:5555` |
-| `npm run build` | Production build to `dist/client` |
-| `npm run test` | Unit tests |
-| `npm run lint` / `npm run type-check` | Lint / TypeScript check |
+| `pnpm run dev` | Dev server on `:5555` |
+| `pnpm run build` | Production build to `dist/client` |
+| `pnpm run test` | Unit tests |
+| `pnpm run lint` / `pnpm run type-check` | Lint / TypeScript check |
 
 ## Related
 

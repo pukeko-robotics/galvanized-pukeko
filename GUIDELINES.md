@@ -101,10 +101,10 @@ Please follow this workflow:
 
 - Analyze requirements.
 - Develop changes.
-- Make sure all tests pass `npm run test` and fix if possible.
+- Make sure all tests pass `pnpm run test` and fix if possible.
     - Request relevant documentation if some of the test failures are unclear.
-- Once all tests are green check lint with `npm run lint`.
-    - If any lint failures are present try fixing them with `npm run lint -- --fix`.
+- Once all tests are green check lint with `pnpm run lint`.
+    - If any lint failures are present try fixing them with `pnpm run lint --fix`.
     - If autofix didn't help, try fixing them yourself.
     - Prefer testing all user outputs, including testing absence of unexpected outputs.
 

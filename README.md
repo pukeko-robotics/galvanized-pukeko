@@ -79,18 +79,18 @@ is the other supported AG-UI backend.
 
 Prerequisites: Node.js 24+. (The ADK backend additionally needs Java 17+; Maven is bundled via `./mvnw`.)
 
-**Option 1 — Gaunt Sloth backend (npm only):**
+**Option 1 — Gaunt Sloth backend (Node only):**
 
 ```bash
-npm install
-npm run start-gth-ag-ui   # AG-UI server on :3000 + web client on :5555
+pnpm install
+pnpm run start-gth-ag-ui   # AG-UI server on :3000 + web client on :5555
 ```
 
 **Option 2 — ADK agent (Java):**
 
 ```bash
-npm install
-npm run start-adk         # ADK agent on :8080 + web client on :5555
+pnpm install
+pnpm run start-adk         # ADK agent on :8080 + web client on :5555
 ```
 
 See the [ADK README](packages/galvanized-pukeko-agent-adk/README.md) for ADK setup, models, MCP/A2A
@@ -109,8 +109,8 @@ More end-to-end setups live in [examples/](examples/).
 End-to-end tests use [Playwright](https://playwright.dev/); the runners start the services for you:
 
 ```bash
-npm run it-gth-ag-ui   # Gaunt Sloth backend
-npm run it-adk         # ADK backend (add it-adk-headed for a visible browser)
+pnpm run it-gth-ag-ui   # Gaunt Sloth backend
+pnpm run it-adk         # ADK backend (add it-adk-headed for a visible browser)
 ```
 
 If Playwright reports the browser is missing, run `npx playwright install`.
