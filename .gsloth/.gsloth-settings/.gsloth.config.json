@@ -13,9 +13,9 @@
       "filesystem": "all",
       "devTools": {
         "run_build": "build-ui-server",
-        "run_lint": "npm run lint --workspaces",
-        "run_tests": "npm run test --workspaces",
-        "run_single_test": "npm run test -w packages/${testPath}"
+        "run_lint": "pnpm -r run lint",
+        "run_tests": "pnpm -r run test",
+        "run_single_test": "pnpm --filter ./packages/${testPath} run test"
       }
     }
   }
