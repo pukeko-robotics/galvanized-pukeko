@@ -5,7 +5,7 @@ We are going to build an integration between Galvanized Pukeko and Gaunt Sloth u
 ## Working Repositories
 
 - https://github.com/pukeko-robotics/galvanized-pukeko.git
-- https://github.com/Galvanized-Pukeko/gaunt-sloth-assistant.git
+- https://github.com/pukeko-robotics/gaunt-sloth.git
 
 ## Reference Dependencies
 
@@ -18,7 +18,7 @@ Reference dependencies are checked out for reference to help agents understand h
 
 ## Tasks
 
-- Checkout https://github.com/Galvanized-Pukeko/gaunt-sloth-assistant.git as a submodule to packages dir, add a command to run gaunt sloth in chat mode from root project package json.
+- Checkout https://github.com/pukeko-robotics/gaunt-sloth.git as a submodule to packages dir, add a command to run gaunt sloth in chat mode from root project package json.
 - Check out the 4 reference repositories to the `./_readonly` directory.
 - Create a very minimalistic AGENTS.md file explaining that the repositories we are working on are `galvanized-pukeko` and `gaunt-sloth-assistant`, and that copies of important dependencies are available in the `./_readonly` directory.
 - Create a CLAUDE.md file containing only a reference to `@AGENTS.md`.

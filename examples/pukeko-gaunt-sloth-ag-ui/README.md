@@ -66,5 +66,5 @@ The example ships with an OpenAI configuration. Set `OPENAI_API_KEY` in your env
 
 ## Related
 
-- [Gaunt Sloth Assistant](https://github.com/Galvanized-Pukeko/gaunt-sloth-assistant)
+- [Gaunt Sloth Assistant](https://github.com/pukeko-robotics/gaunt-sloth)
 - [Galvanized Pukeko Web Client](../../packages/galvanized-pukeko-web-client/README.md)

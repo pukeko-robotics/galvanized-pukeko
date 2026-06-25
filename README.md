@@ -72,7 +72,7 @@ The Vue UI is backend-agnostic — any AG-UI server works. This repo ships two: 
 | [`galvanized-pukeko-web-client`](packages/galvanized-pukeko-web-client/) | Thin host app that mounts the Vue UI — the dev server, and the build embedded by the ADK agent. Not published. |
 | [`galvanized-pukeko-agent-adk`](packages/galvanized-pukeko-agent-adk/) | One backend option: a Spring Boot / Google ADK agent with UI-rendering tools, MCP and A2A. On [Maven Central](https://central.sonatype.com/artifact/io.github.galvanized-pukeko/galvanized-pukeko-agent-adk). See its [README](packages/galvanized-pukeko-agent-adk/README.md). |
 
-[Gaunt Sloth](https://github.com/Galvanized-Pukeko/gaunt-sloth-assistant) — a separate TypeScript CLI —
+[Gaunt Sloth](https://github.com/pukeko-robotics/gaunt-sloth) — a separate TypeScript CLI —
 is the other supported AG-UI backend.
 
 ## Run a demo
@@ -125,7 +125,7 @@ Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 - [Pukeko robot controller](https://github.com/andruhon/pukeko-robot-controller) — reference implementation using client tools
 - [AG-UI protocol](https://github.com/ag-ui-protocol/ag-ui)
 - [A2UI](https://github.com/google/A2UI)
-- [Gaunt Sloth assistant](https://github.com/Galvanized-Pukeko/gaunt-sloth-assistant)
+- [Gaunt Sloth assistant](https://github.com/pukeko-robotics/gaunt-sloth)
 - [Google ADK (Agent Development Kit)](https://github.com/google/adk-java)
 
 ## License
