@@ -18,8 +18,8 @@ Each tool accepts a number of simple parameters. For example, the form tool has 
 
 As of 01 December 2025, version 0.0.2 is available on Maven Central and is easy to configure and start.
 See demo projects:
-- UI Agent connecting to A2A agent: https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/examples/adk-ui-agent-to-adk-agent
-- UI Agent connecting to MCP server: https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/examples/adk-ui-agent-to-external-mcp
+- UI Agent connecting to A2A agent: https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/examples/adk-ui-agent-to-adk-agent
+- UI Agent connecting to MCP server: https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/examples/adk-ui-agent-to-external-mcp
 
 ### Demo
 

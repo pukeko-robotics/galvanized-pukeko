@@ -1,5 +1,5 @@
 {
-  "name": "galvanized-pukeko-ai-ui",
+  "name": "galvanized-pukeko",
   "version": "0.0.1",
   "private": true,
   "description": "Give your LLM agent a real UI: a Vue 3 component library that renders forms, charts, tables and interactive A2UI surfaces over the AG-UI protocol, with reference AG-UI backends.",
@@ -7,10 +7,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui.git"
+    "url": "git+https://github.com/pukeko-robotics/galvanized-pukeko.git"
   },
-  "homepage": "https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui#readme",
-  "bugs": "https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/issues",
+  "homepage": "https://github.com/pukeko-robotics/galvanized-pukeko#readme",
+  "bugs": "https://github.com/pukeko-robotics/galvanized-pukeko/issues",
   "type": "module",
   "packageManager": "pnpm@11.3.0",
   "scripts": {

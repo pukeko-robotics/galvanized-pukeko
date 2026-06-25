@@ -4,7 +4,7 @@
 a chat interface plus forms, charts, tables and interactive [A2UI](https://github.com/google/A2UI)
 surfaces — in your app, on the fly, by talking to an [AG-UI](https://github.com/ag-ui-protocol/ag-ui)
 server (such as [Gaunt Sloth](https://github.com/Galvanized-Pukeko/gaunt-sloth-assistant) or the
-[ADK agent](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/packages/galvanized-pukeko-agent-adk)).
+[ADK agent](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/galvanized-pukeko-agent-adk)).
 
 The fastest way to use it is the all-in-one `CoreApp` component. You only need an AG-UI server to
 point it at.

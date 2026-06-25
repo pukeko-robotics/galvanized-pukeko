@@ -19,9 +19,9 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git@github.com:Galvanized-Pukeko/galvanized-pukeko-ai-ui.git</connection>
-    <developerConnection>scm:git:git@github.com:Galvanized-Pukeko/galvanized-pukeko-ai-ui.git</developerConnection>
-    <url>https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui</url>
+    <connection>scm:git:git@github.com:pukeko-robotics/galvanized-pukeko.git</connection>
+    <developerConnection>scm:git:git@github.com:pukeko-robotics/galvanized-pukeko.git</developerConnection>
+    <url>https://github.com/pukeko-robotics/galvanized-pukeko</url>
     <tag>HEAD</tag>
   </scm>
   <developers>

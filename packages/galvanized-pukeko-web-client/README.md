@@ -7,9 +7,9 @@ runtime configuration — it ships **no UI of its own**. The chat interface, dyn
 tables and A2UI surfaces all live in the `vue-ui` package.
 
 This package exists as (a) the static build that the
-[`galvanized-pukeko-agent-adk`](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/packages/galvanized-pukeko-agent-adk)
+[`galvanized-pukeko-agent-adk`](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/galvanized-pukeko-agent-adk)
 server embeds, and (b) a runnable reference for the
-[examples](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/examples).
+[examples](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/examples).
 
 > Not published to npm — it is an app, not a library. The publishable package is
 > [`@galvanized-pukeko/vue-ui`](https://www.npmjs.com/package/@galvanized-pukeko/vue-ui).
@@ -28,7 +28,7 @@ AGUI_URL=http://localhost:3000/agents/default/run pnpm run dev
 ```
 
 Without `AGUI_URL`, the app fetches `/config.json` at runtime instead — see the vue-ui
-[configuration docs](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/blob/main/packages/galvanized-pukeko-vue-ui/docs/configuration.md).
+[configuration docs](https://github.com/pukeko-robotics/galvanized-pukeko/blob/main/packages/galvanized-pukeko-vue-ui/docs/configuration.md).
 
 ## The whole app
 
@@ -56,7 +56,7 @@ createApp(App).mount('#app')
 
 ## Related
 
-- [`@galvanized-pukeko/vue-ui` — the library](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/packages/galvanized-pukeko-vue-ui)
-- [Component & configuration docs](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/packages/galvanized-pukeko-vue-ui/docs)
-- [Examples](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/examples)
-- [Monorepo root](https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui)
+- [`@galvanized-pukeko/vue-ui` — the library](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/galvanized-pukeko-vue-ui)
+- [Component & configuration docs](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/galvanized-pukeko-vue-ui/docs)
+- [Examples](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/examples)
+- [Monorepo root](https://github.com/pukeko-robotics/galvanized-pukeko)

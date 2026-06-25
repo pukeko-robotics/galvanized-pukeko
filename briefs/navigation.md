@@ -14,5 +14,5 @@ Once the new layout is established refactor the PkNavHeader.vue
 - PkNavHeader component to use slots, all elements should be placed in the slots.
 - Refactor the KitchenSink to add some components to the slots (may reuse those hardcoded in the PkNavHeader.vue now)
 - In App.vue add the logo in appropriate slot of PkNavHeader.vue
-- Add a link "About Galvanized Pukeko" pointing to https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/
+- Add a link "About Galvanized Pukeko" pointing to https://github.com/pukeko-robotics/galvanized-pukeko/
 - Make sure standard playwright tests (according to root README.md) they are a bit flakey, try more than once if only one or two fail.

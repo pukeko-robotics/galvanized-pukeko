@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui.git",
+    "url": "git+https://github.com/pukeko-robotics/galvanized-pukeko.git",
     "directory": "packages/galvanized-pukeko-vue-ui"
   },
-  "homepage": "https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/tree/main/packages/galvanized-pukeko-vue-ui#readme",
-  "bugs": "https://github.com/Galvanized-Pukeko/galvanized-pukeko-ai-ui/issues",
+  "homepage": "https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/galvanized-pukeko-vue-ui#readme",
+  "bugs": "https://github.com/pukeko-robotics/galvanized-pukeko/issues",
   "keywords": [
     "vue",
     "vue3",

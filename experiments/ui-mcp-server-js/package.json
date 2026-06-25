@@ -1,5 +1,5 @@
 {
-  "name": "@galvanized-pukeko-ai-ui/ui-mcp-server-js",
+  "name": "@galvanized-pukeko/ui-mcp-server-js",
   "version": "0.0.1",
   "main": "index.js",
   "bin": {

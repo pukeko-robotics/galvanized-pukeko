@@ -1,5 +1,5 @@
 {
-  "name": "@galvanized-pukeko-ai-ui/demo-mcp",
+  "name": "@galvanized-pukeko/demo-mcp",
   "version": "0.0.1",
   "type": "module",
   "main": "index.js",
