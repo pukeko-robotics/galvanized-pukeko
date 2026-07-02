@@ -44,11 +44,15 @@ Global maven is not available on this machine use `./mvnw` for java projects (`p
 consumed from public npm too (the `2.0.0-alpha.x` line), so there is no local
 registry and no cross-repo `file:` redirect. To cut a `vue-ui` release:
 
+This is a pnpm workspace (`packageManager: pnpm@11.3.0`), so use pnpm. Set the
+next public version by hand (the 0.0.14/15/16 tags were verdaccio-local and never
+public — public went 0.0.13 → 0.1.0), build, then publish:
+
 ```bash
 cd packages/galvanized-pukeko-vue-ui
-npm version patch --no-git-tag-version   # or set the next public patch by hand
-npm run build
-npm publish --access public
+pnpm version 0.1.0 --no-git-tag-version   # or edit package.json by hand
+pnpm run build                            # pnpm publish does NOT auto-build (no prepublishOnly)
+pnpm publish                              # publishConfig sets access: public; add --no-git-checks if the tree is dirty
 ```
 
 Then bump each consumer's `@galvanized-pukeko/vue-ui` pin and reinstall.
