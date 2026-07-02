@@ -38,45 +38,17 @@ From root directory:
 
 Global maven is not available on this machine use `./mvnw` for java projects (`packages/galvanized-pukeko-agent-adk`)
 
-## Local Development Registry (Verdaccio)
+## Publishing `@galvanized-pukeko/vue-ui`
 
-`@galvanized-pukeko/vue-ui` and `@gaunt-sloth/*` are published to a local
-[Verdaccio](https://verdaccio.org) registry at `http://localhost:4873` for
-development against unpublished versions. A gitignored `.npmrc` at the repo
-root scopes those packages to localhost:
-
-```
-@gaunt-sloth:registry=http://localhost:4873
-@galvanized-pukeko:registry=http://localhost:4873
-```
-
-Iteration on `vue-ui`:
+`vue-ui` is published to the **public** npm registry. `@gaunt-sloth/*` is
+consumed from public npm too (the `2.0.0-alpha.x` line), so there is no local
+registry and no cross-repo `file:` redirect. To cut a `vue-ui` release:
 
 ```bash
 cd packages/galvanized-pukeko-vue-ui
-npm version patch --no-git-tag-version
+npm version patch --no-git-tag-version   # or set the next public patch by hand
 npm run build
-npm publish --registry http://localhost:4873
+npm publish --access public
 ```
 
-Then bump the consumer's `@galvanized-pukeko/vue-ui` pin and reinstall.
-
-Container/auth setup is documented in
-`gaunt-sloth-assistant/CONTRIBUTING.md` (section "Local Development Registry").
-The same Verdaccio instance and `~/.npmrc` token serve both scopes.
-
-### Start Verdaccio
-
-First-time start (preserves the container across restarts):
-
-```bash
-docker run -d --name verdaccio -p 4873:4873 -v verdaccio-storage:/verdaccio/storage verdaccio/verdaccio
-```
-
-If a `verdaccio` container already exists (you'll see
-`Conflict. The container name "/verdaccio" is already in use`),
-just start it:
-
-```bash
-docker start verdaccio
-```
+Then bump each consumer's `@galvanized-pukeko/vue-ui` pin and reinstall.

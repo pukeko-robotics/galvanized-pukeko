@@ -17,7 +17,6 @@
     "prepare": "git config core.hooksPath .githooks",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
-    "use:local": "pnpm install --registry http://localhost:4873 --no-lockfile",
     "web": "pnpm --filter @galvanized-pukeko/web-client run dev",
     "web-ag-ui": "AGUI_URL=http://localhost:3000/agents/default/run pnpm --filter @galvanized-pukeko/web-client run dev",
     "sink": "pnpm --filter @galvanized-pukeko/web-client run sink",
@@ -28,7 +27,7 @@
     "start-gth-ag-ui": "node start-gth-ag-ui.js"
   },
   "dependencies": {
-    "@gaunt-sloth/agent": "file:../gaunt-sloth/packages/agent",
+    "@gaunt-sloth/agent": "2.0.0-alpha.5",
     "@langchain/openai": "^1.4.7",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/ws": "^8.18.1",

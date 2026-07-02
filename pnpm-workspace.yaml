@@ -2,14 +2,21 @@ packages:
   - 'packages/galvanized-pukeko-vue-ui'
   - 'packages/galvanized-pukeko-web-client'
 
-# Cross-repo interop (OPS-6): @gaunt-sloth/agent is consumed via a relative
-# file: dep from a *sibling* repo. Its own package.json declares
-# @gaunt-sloth/core as `workspace:*`, which is only resolvable inside
-# gaunt-sloth's own pnpm workspace — not here. These overrides replace the
-# `workspace:*` specifier with the sibling file: path before resolution, so the
-# transitive @gaunt-sloth/core resolves to ../gaunt-sloth/packages/core.
-# (pnpm 11 reads overrides from this file, not package.json's "pnpm" field.)
+minimumReleaseAgeExclude:
+  - '@gaunt-sloth/agent@2.0.0-alpha.5'
+  - '@gaunt-sloth/core@2.0.0-alpha.5'
+
+# @gaunt-sloth/agent is consumed from the public npm registry (2.0.0-alpha.x);
+# no cross-repo file: redirect is needed — the published package pins its own
+# @gaunt-sloth/core by version. The uuid floor keeps a single resolved copy.
 overrides:
   uuid: '>=11.1.1'
-  '@gaunt-sloth/agent': 'file:../gaunt-sloth/packages/agent'
-  '@gaunt-sloth/core': 'file:../gaunt-sloth/packages/core'
+  # @gaunt-sloth/* 2.0.0-alpha.5 ships zod-4-only schema code (z.looseObject)
+  # but still declares the permissive range `^3.25.0 || ^4.0.0`, so pnpm dedupes
+  # it onto this repo's own zod 3 and the AG-UI server crashes at boot. Force
+  # the gaunt-sloth subtree onto zod 4 (already in the tree). Scoped so this
+  # repo's own zod 3 + zod-to-json-schema@3 are untouched. Drop once upstream
+  # bumps its zod dep to ^4.
+  '@gaunt-sloth/core>zod': '^4.0.0'
+  '@gaunt-sloth/agent>zod': '^4.0.0'
+  '@gaunt-sloth/review>zod': '^4.0.0'
