@@ -286,7 +286,7 @@ function findUnfulfilledClientToolCalls(
   return unfulfilled
 }
 
-class ChatService {
+export class ChatService {
   private agent: HttpAgent | null = null
   // Latched by stop(); blocks the tool-fulfilment loop from resuming the agent.
   // Cleared when a new message is sent or the thread is reset.
@@ -449,6 +449,14 @@ class ChatService {
   ): Promise<void> {
     this.runAbort = new AbortController()
     let forwardedProps: Record<string, unknown> | undefined
+    // Client tool calls whose handler has already run this turn. A
+    // `returnDirect` tool (e.g. `finish_task`) ends the server-side graph
+    // without leaving a matching tool-result message in `agent.messages`, so
+    // `findUnfulfilledClientToolCalls` keeps reporting it as unfulfilled on
+    // every later pass. Tracking the ids we've fulfilled lets us tell that
+    // reappearance (turn is finalized, stop) apart from a genuinely new tool
+    // call (fresh id, keep resuming).
+    const fulfilledIds = new Set<string>()
     try {
       // Bounded so a buggy handler/server can't spin us forever.
       for (let i = 0; i < 64; i++) {
@@ -473,8 +481,14 @@ class ChatService {
           opts.clientToolHandlers,
           boundaryMessageId,
         )
-        if (unfulfilled.length === 0) {
-          // No more client tools to fulfil. If a message was queued after the
+        // Only tools we haven't already fulfilled this turn are outstanding
+        // work — this is what stops a `returnDirect` tool from re-POSTing
+        // forever (its id lingers "unfulfilled" but is already handled). The
+        // server interrupts at the first client tool, so in practice at most
+        // one genuinely-new call appears per pass.
+        const next = unfulfilled.find((tc) => !fulfilledIds.has(tc.id))
+        if (!next) {
+          // No new client tools to fulfil. If a message was queued after the
           // agent's last decision (so it never rode a resume), deliver it now
           // as a fresh, non-resume turn so the agent still acts on it.
           if (this.messageQueue.length > 0 && !this.stopped) {
@@ -486,11 +500,6 @@ class ChatService {
           }
           return
         }
-
-        // The server interrupts at the first client tool, so process one per
-        // iteration. A second tool call (if the model emitted any) shows up
-        // unfulfilled on the next pass after this one is resumed.
-        const next = unfulfilled[0]
         const handler = opts.clientToolHandlers![next.name]
         let args: unknown = {}
         try {
@@ -511,6 +520,10 @@ class ChatService {
         }
 
         if (this.stopped) return
+
+        // Handler has run; don't fulfil this id again even if the server never
+        // records a tool-result message for it (the returnDirect case).
+        fulfilledIds.add(next.id)
 
         // Drain any queued messages onto this resume so the agent sees them
         // alongside the tool result, before it decides the next action.
