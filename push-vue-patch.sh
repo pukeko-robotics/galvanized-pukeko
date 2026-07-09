@@ -1,4 +1,4 @@
-npm version patch --no-git-tag-version -w @galvanized-pukeko/vue-ui
+pnpm version patch --no-git-tag-version -w @galvanized-pukeko/vue-ui
 VERSION=$(node -p "require('./packages/galvanized-pukeko-vue-ui/package.json').version")
 git add packages/galvanized-pukeko-vue-ui/package.json package-lock.json
 git commit -m "@galvanized-pukeko/vue-ui@$VERSION"
