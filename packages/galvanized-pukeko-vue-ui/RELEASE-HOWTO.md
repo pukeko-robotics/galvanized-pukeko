@@ -43,7 +43,7 @@ sh push-vue-patch.sh
 
 Ensure you're logged in (`npm login`), then publish:
 ```bash
-npm publish --access public -w @galvanized-pukeko/vue-ui
+pnpm --filter @galvanized-pukeko/vue-ui publish --access public
 ```
 
 `--access public` is required for scoped packages. Review the file list before confirming. The `files` field in package.json controls what gets included.
