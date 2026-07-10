@@ -1,6 +1,6 @@
 package io.github.galvanized_pukeko.config;
 
-import com.google.adk.a2a.RemoteA2AAgent;
+import com.google.adk.a2a.agent.RemoteA2AAgent;
 import io.a2a.client.Client;
 import io.a2a.client.config.ClientConfig;
 import io.a2a.client.http.A2ACardResolver;

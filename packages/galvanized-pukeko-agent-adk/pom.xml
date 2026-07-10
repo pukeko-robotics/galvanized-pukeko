@@ -53,11 +53,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- Align OpenTelemetry versions required by ADK 0.7.0 -->
+      <!-- Align OpenTelemetry versions required by ADK 1.6.0 -->
       <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-bom</artifactId>
-        <version>1.59.0</version>
+        <version>1.51.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -69,18 +69,18 @@
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk</artifactId>
-      <version>0.7.0</version>
+      <version>1.6.0</version>
     </dependency>
     <!-- The ADK dev (we currently extend AdkWebServer, so it is needed not only for debugging) -->
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk-dev</artifactId>
-      <version>0.7.0</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk-a2a</artifactId>
-      <version>0.7.0</version>
+      <version>1.6.0</version>
     </dependency>
     <!-- Jackson Kotlin module - needed for Anthropic SDK -->
     <dependency>
@@ -92,7 +92,7 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-websocket</artifactId>
-      <version>3.4.1</version>
+      <version>4.0.2</version>
     </dependency>
 
     <!-- AG-UI Kotlin SDK: core types + AgUiJson (KMP jvm coordinates: the -jvm suffix). -->
@@ -124,7 +124,7 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
-      <version>3.4.1</version>
+      <version>4.0.2</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

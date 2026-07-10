@@ -96,7 +96,7 @@ This provides:
 The `demo-agent` is a standard ADK agent that can be connected to via A2A protocol. The `ui-agent` is configured to connect to it via `application.properties`:
 
 ```properties
-adk.a2a.agents.demo-agent.url=http://localhost:8081
+adk.a2a.agents.demo-agent.url=http://localhost:8082
 adk.a2a.agents.demo-agent.description=A demo agent that can answer questions
 ```
 
@@ -112,7 +112,7 @@ Press `Ctrl+C` in the terminal where `start-all.sh` is running, or:
 
 ```bash
 lsof -ti:8080 | xargs kill -9
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 ```
 
 ## Deploying to Google Cloud Run

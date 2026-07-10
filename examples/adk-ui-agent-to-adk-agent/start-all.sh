@@ -7,7 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Starting demo-agent on port 8081..."
+echo "Starting demo-agent on port 8082..."
 cd "$SCRIPT_DIR/demo-agent"
 ./mvnw clean compile exec:java -Dexec.classpathScope=compile -Dexec.args="--adk.agents.source-dir=target" &
 DEMO_AGENT_PID=$!
@@ -19,7 +19,7 @@ UI_AGENT_PID=$!
 
 echo ""
 echo "Both agents starting..."
-echo "  demo-agent (port 8081): PID $DEMO_AGENT_PID"
+echo "  demo-agent (port 8082): PID $DEMO_AGENT_PID"
 echo "  demo-ui-agent (port 8080): PID $UI_AGENT_PID"
 echo ""
 echo "Open http://localhost:8080 in your browser"
