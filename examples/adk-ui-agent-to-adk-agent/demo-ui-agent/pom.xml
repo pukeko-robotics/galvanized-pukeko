@@ -9,8 +9,8 @@
   <url>https://galvanized-pukeko.github.io/</url>
 
   <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jackson.version>2.18.2</jackson.version>
   </properties>
@@ -25,12 +25,12 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- Align OpenTelemetry to the version required by ADK 0.7.0 (matches galvanized-pukeko-agent-adk);
+      <!-- Align OpenTelemetry to the version required by ADK 1.6.0 (matches galvanized-pukeko-agent-adk);
            dependencyManagement is not transitive, so it must be re-imported here. -->
       <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-bom</artifactId>
-        <version>1.59.0</version>
+        <version>1.51.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>

@@ -34,10 +34,13 @@
 
   <!-- Specify the version of Java you'll be using -->
   <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <!-- JDK 21 required: the AG-UI kotlin-core/kotlin-encoder artifacts are JVM-21 bytecode. -->
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jackson.version>2.18.2</jackson.version>
+    <agui.version>0.4.1</agui.version>
+    <kotlinx-serialization.version>1.8.1</kotlinx-serialization.version>
   </properties>
 
   <dependencyManagement>
@@ -50,11 +53,11 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- Align OpenTelemetry versions required by ADK 0.7.0 -->
+      <!-- Align OpenTelemetry versions required by ADK 1.6.0 -->
       <dependency>
         <groupId>io.opentelemetry</groupId>
         <artifactId>opentelemetry-bom</artifactId>
-        <version>1.59.0</version>
+        <version>1.51.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -66,18 +69,18 @@
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk</artifactId>
-      <version>0.7.0</version>
+      <version>1.6.0</version>
     </dependency>
     <!-- The ADK dev (we currently extend AdkWebServer, so it is needed not only for debugging) -->
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk-dev</artifactId>
-      <version>0.7.0</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk-a2a</artifactId>
-      <version>0.7.0</version>
+      <version>1.6.0</version>
     </dependency>
     <!-- Jackson Kotlin module - needed for Anthropic SDK -->
     <dependency>
@@ -89,13 +92,40 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-websocket</artifactId>
-      <version>3.4.1</version>
+      <version>4.0.2</version>
     </dependency>
-    <!-- javax.validation for AG-UI BaseEvent NotNull annotation -->
+
+    <!-- AG-UI Kotlin SDK: core types + AgUiJson (KMP jvm coordinates: the -jvm suffix). -->
     <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
-      <version>2.0.1.Final</version>
+      <groupId>com.ag-ui.community</groupId>
+      <artifactId>kotlin-core-jvm</artifactId>
+      <version>${agui.version}</version>
+    </dependency>
+    <!-- AG-UI Kotlin SDK: EventEncoder (encode / encodeToJson). -->
+    <dependency>
+      <groupId>com.ag-ui.community</groupId>
+      <artifactId>kotlin-encoder-jvm</artifactId>
+      <version>${agui.version}</version>
+    </dependency>
+    <!--
+      kotlin-core declares kotlinx-serialization-json only at runtime scope (Gradle
+      `implementation`), so it is NOT on the compile classpath transitively. We reference
+      AgUiJson (a kotlinx `Json`) + StringFormat.decodeFromString at compile time to decode
+      RunAgentInput, so we must declare it explicitly at compile scope. (SDK ergonomics finding:
+      re-exporting it as `api` would remove this for every JVM consumer.)
+    -->
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-serialization-json-jvm</artifactId>
+      <version>${kotlinx-serialization.version}</version>
+    </dependency>
+
+    <!-- Test: MockMvc wire-proof of the AG-UI controller (decode + SseEmitter framing). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <version>4.0.2</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

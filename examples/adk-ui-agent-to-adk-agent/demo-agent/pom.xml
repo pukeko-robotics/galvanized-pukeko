@@ -10,8 +10,8 @@
 
   <!-- Specify the version of Java you'll be using -->
   <properties>
-    <maven.compiler.source>17</maven.compiler.source>
-    <maven.compiler.target>17</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jackson.version>2.18.2</jackson.version>
     <io.a2a.sdk.version>0.3.2.Final</io.a2a.sdk.version>
@@ -34,18 +34,18 @@
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk</artifactId>
-      <version>0.4.0</version>
+      <version>1.6.0</version>
     </dependency>
     <!-- The ADK dev web UI to debug your agent -->
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk-dev</artifactId>
-      <version>0.4.0</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.adk</groupId>
       <artifactId>google-adk-a2a</artifactId>
-      <version>0.4.0</version>
+      <version>1.6.0</version>
     </dependency>
     <!-- Jackson Kotlin module - needed for Anthropic SDK -->
     <dependency>
@@ -81,7 +81,7 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
-        <version>3.2.0</version>
+        <version>4.0.2</version>
       </plugin>
     </plugins>
   </build>
