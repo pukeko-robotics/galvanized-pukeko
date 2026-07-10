@@ -28,7 +28,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Drives one AG-UI run against the Google ADK {@code Runner} and streams the translated AG-UI
@@ -48,6 +50,18 @@ public class AdkLocalAgent implements AgUiAgentRunner {
     private static final Logger log = LoggerFactory.getLogger(AdkLocalAgent.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Dedicated pool for the blocking ADK run loop. Each run does long blocking work
+     * ({@code blockingIterable()} over the LLM stream), so it must not run on the shared
+     * {@code ForkJoinPool.commonPool()} (CPU-core-sized) — that would cap concurrent runs
+     * and starve other pool work. Cached daemon threads scale to demand and reuse idle threads.
+     */
+    private static final ExecutorService RUN_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "agui-run");
+        t.setDaemon(true);
+        return t;
+    });
+
     private final String agentId;
     private final Runner runner;
 
@@ -63,10 +77,17 @@ public class AdkLocalAgent implements AgUiAgentRunner {
     @Override
     public void run(RunAgentInput input, SseEmitter emitter, String accept) {
         EventEncoder encoder = new EventEncoder(accept);
-        CompletableFuture.runAsync(() -> drive(input, emitter, encoder));
+        // Stop pushing frames once the client goes away (disconnect / timeout / error). Best-effort:
+        // the loop checks this between ADK events and stops emitting; the demo does not forcibly
+        // dispose the in-flight ADK subscription.
+        AtomicBoolean active = new AtomicBoolean(true);
+        emitter.onCompletion(() -> active.set(false));
+        emitter.onTimeout(() -> active.set(false));
+        emitter.onError(t -> active.set(false));
+        RUN_EXECUTOR.execute(() -> drive(input, emitter, encoder, active));
     }
 
-    private void drive(RunAgentInput input, SseEmitter emitter, EventEncoder encoder) {
+    private void drive(RunAgentInput input, SseEmitter emitter, EventEncoder encoder, AtomicBoolean active) {
         String threadId = input.getThreadId();
         String runId = input.getRunId();
 
@@ -105,6 +126,10 @@ public class AdkLocalAgent implements AgUiAgentRunner {
             boolean messageStarted = false;
 
             for (Event adkEvent : adkEvents.blockingIterable()) {
+                if (!active.get()) {
+                    // Client disconnected — stop translating/emitting.
+                    return;
+                }
                 if (adkEvent.content().isEmpty()) {
                     continue;
                 }
@@ -174,8 +199,12 @@ public class AdkLocalAgent implements AgUiAgentRunner {
 
         } catch (Exception e) {
             log.error("Error during AG-UI agent run", e);
+            // RunErrorEvent.message is non-nullable in kotlin-core; many exceptions (bare NPEs,
+            // some ADK/runtime errors) have a null message, so coalesce to the class name — else
+            // the RunErrorEvent constructor itself NPEs and the client gets no terminal frame.
+            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
             try {
-                send(emitter, encoder, new RunErrorEvent(e.getMessage(), null, null, null));
+                send(emitter, encoder, new RunErrorEvent(message, null, null, null));
             } catch (Exception sendFailure) {
                 log.debug("Could not emit RUN_ERROR (client likely gone): {}", sendFailure.getMessage());
             }
