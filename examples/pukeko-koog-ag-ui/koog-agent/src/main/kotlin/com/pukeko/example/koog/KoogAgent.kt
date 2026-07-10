@@ -17,6 +17,7 @@ import com.agui.core.types.RunStartedEvent
 import com.agui.core.types.TextMessageContentEvent
 import com.agui.core.types.TextMessageEndEvent
 import com.agui.core.types.TextMessageStartEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.slf4j.LoggerFactory
@@ -65,7 +66,8 @@ private fun resolveLlm(): LlmConfig {
     }
 }
 
-// Resolve once at startup so a misconfiguration fails fast (and we log the target).
+// Resolved lazily on the first request (and we log the target then); a misconfiguration
+// therefore surfaces as a RUN_ERROR on that first call rather than at boot.
 private val llm: LlmConfig by lazy { resolveLlm().also { log.info("LLM target = {}", it.label) } }
 
 /**
@@ -114,6 +116,11 @@ fun koogAgent(input: RunAgentInput): Flow<BaseEvent> = flow {
 
         emit(TextMessageEndEvent(messageId = messageId))
         emit(RunFinishedEvent(threadId = input.threadId, runId = input.runId))
+    } catch (ce: CancellationException) {
+        // Client disconnect / stream cancellation: propagate so the flow tears down
+        // cooperatively. Do NOT convert it to a RUN_ERROR (emitting after a downstream
+        // cancellation would violate flow-exception transparency).
+        throw ce
     } catch (e: Exception) {
         log.error("koogAgent run failed", e)
         emit(RunErrorEvent(message = e.message ?: e.toString()))
