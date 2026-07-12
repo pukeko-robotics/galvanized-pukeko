@@ -28,6 +28,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -221,9 +222,14 @@ public class AdkLocalAgent implements AgUiAgentRunner {
      * Spring pick the Jackson converter, which re-serializes the String — emitting a double-encoded
      * {@code data:"{\"type\":...}"} that an {@code @ag-ui/client} SSE parser rejects with a ZodError.
      * Forcing {@code text/plain} selects {@code StringHttpMessageConverter}, writing the raw JSON as
-     * {@code data:{"type":...}} — the canonical AG-UI frame the vue web client expects.
+     * {@code data:{"type":...}} — the canonical AG-UI frame the vue web client expects. The charset is
+     * pinned to <b>UTF-8</b>: {@code StringHttpMessageConverter}'s default is ISO-8859-1, but the
+     * browser {@code EventSource} always decodes SSE as UTF-8, so any non-ASCII assistant text
+     * (accents, emoji, CJK) would corrupt without this.
      */
+    private static final MediaType TEXT_PLAIN_UTF8 = new MediaType("text", "plain", StandardCharsets.UTF_8);
+
     private void send(SseEmitter emitter, EventEncoder encoder, BaseEvent event) throws IOException {
-        emitter.send(SseEmitter.event().data(encoder.encodeToJson(event), MediaType.TEXT_PLAIN).build());
+        emitter.send(SseEmitter.event().data(encoder.encodeToJson(event), TEXT_PLAIN_UTF8).build());
     }
 }
