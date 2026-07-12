@@ -2,6 +2,8 @@ package com.pukeko.example.koog
 
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.executor.clients.LLMClient
+import ai.koog.prompt.executor.clients.google.GoogleLLMClient
+import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.clients.openai.OpenAIModels
 import ai.koog.prompt.executor.ollama.client.OllamaClient
@@ -46,6 +48,17 @@ private data class LlmConfig(val client: LLMClient, val model: LLModel, val labe
 
 private fun resolveLlm(): LlmConfig {
     return when (System.getenv("LLM_PROVIDER")?.lowercase() ?: "openai") {
+        "google" -> {
+            val apiKey = System.getenv("GOOGLE_API_KEY")
+                ?: error("GOOGLE_API_KEY is not set (Google AI Studio key)")
+            val modelId = System.getenv("GOOGLE_MODEL") ?: "gemini-2.5-flash"
+            // Start from a real Gemini chat model so streaming capabilities are set, then
+            // override the id so any Gemini model name is configurable (same trick as below).
+            // GoogleLLMClient talks to the Gemini Developer API (AI Studio) — no Vertex creds.
+            val model = GoogleModels.Gemini2_5Flash.copy(id = modelId)
+            LlmConfig(GoogleLLMClient(apiKey), model, "google:$modelId")
+        }
+
         "ollama" -> {
             val baseUrl = System.getenv("OLLAMA_BASE_URL") ?: "http://localhost:11434"
             val modelId = System.getenv("OLLAMA_MODEL") ?: "granite4.1:3b"

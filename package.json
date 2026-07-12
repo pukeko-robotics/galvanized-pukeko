@@ -22,6 +22,8 @@
     "sink": "pnpm --filter @galvanized-pukeko/web-client run sink",
     "it-adk": "node it-adk.js",
     "it-adk-headed": "node it-adk.js --headed",
+    "it-koog": "node it-koog.js",
+    "it-koog-headed": "node it-koog.js --headed",
     "it-gth-ag-ui": "node it-gth-ag-ui.js",
     "start-adk": "node start-adk.js",
     "start-gth-ag-ui": "node start-gth-ag-ui.js"

@@ -2,17 +2,20 @@ package io.github.galvanized_pukeko.agui;
 
 import com.agui.core.types.AgUiJsonKt;
 import com.agui.core.types.RunAgentInput;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * AG-UI endpoint. Wire: {@code POST /agents/{agentId}/run} → {@code text/event-stream}.
@@ -39,8 +42,21 @@ public class AgUiController {
     public SseEmitter runAgent(
         @PathVariable String agentId,
         @RequestHeader(value = "Accept", required = false) String accept,
-        @RequestBody String body
+        HttpServletRequest request
     ) {
+        // Read the raw request body straight off the servlet input stream rather than binding it with
+        // {@code @RequestBody String}: AG-UI clients POST {@code application/json}, for which Spring
+        // selects the Jackson converter and tries to deserialize the JSON object into a String — which
+        // fails ("cannot deserialize String from Object value") before the handler even runs. Reading
+        // the stream ourselves keeps the raw text for kotlinx {@code AgUiJson} to decode, as intended.
+        String body;
+        try {
+            body = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.warn("Could not read AG-UI request body for agent {}: {}", agentId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not read AG-UI request body", e);
+        }
+
         RunAgentInput input;
         try {
             // AgUiJson is a Kotlin top-level `val`, exposed to Java as AgUiJsonKt.getAgUiJson().

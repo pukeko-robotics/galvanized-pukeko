@@ -37,6 +37,12 @@ dependencies {
 
     // Koog agent framework (the real streaming-token source behind koogAgent).
     implementation("ai.koog:koog-agents:$koogVersion")
+    // Koog's Google (Gemini) client. koog-agents 1.0.0 bundles the openai/ollama/anthropic
+    // clients but NOT the google one, and the google client has no stable 1.0.0 on Maven Central
+    // (latest is 1.0.0-beta-preview7). Gradle resolves its transitive koog-core deps UP to the
+    // 1.0.0 the rest of the stack pins (a release outranks a -preview qualifier), so the classpath
+    // keeps a single koog core version. Gives GoogleLLMClient / GoogleModels for the "google" branch.
+    implementation("ai.koog:prompt-executor-google-client:1.0.0-beta-preview7")
 
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
