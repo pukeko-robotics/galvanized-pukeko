@@ -1,0 +1,283 @@
+name: Release
+
+# Manually-dispatched release pipeline for galvanized-pukeko. Publishes the ONE
+# public package @galvanized-pukeko/vue-ui; the web-client + agent-adk packages are
+# private examples and are not published.
+#
+# Shaped after gaunt-sloth's release.yml. Three chained gates, the irreversible
+# publish last so it is reached only after every gate is green:
+#
+#   unit-tests  ->  e2e (Koog + ADK Playwright, Google AI Studio)  ->  release
+#
+# RELEASE-VERSIONING MODEL B — "release CURRENT, then post-bump to next".
+# `main` HEAD always carries the *next* version to publish. A run ships whatever
+# version is currently in vue-ui's package.json, and ONLY AFTER a successful publish
+# does it bump to the next version and commit/push. So the run is idempotent at the
+# version level: a failed publish leaves the version unchanged (re-dispatch retries
+# the SAME version); a successful one moves it so it can't be re-shipped. The
+# dispatch inputs describe the POST-bump (applied AFTER this release), NOT the
+# version shipped now.
+#
+# Publishing uses npm Trusted Publishing (OIDC) — no NPM_TOKEN, just `id-token: write`.
+#
+# ┌─ STAYS RED UNTIL ANDREW configures two things (the workflow is correct to land):
+# │   1. Repo secret GOOGLE_API_KEY  (Google AI Studio key) — the e2e job needs it.
+# │   2. npm Trusted Publisher for @galvanized-pukeko/vue-ui, bound to this repo +
+# │      workflow file (release.yml) + environment `release` — the publish step needs it.
+# └─ Also temporary: the "Build the AG-UI encoder to mavenLocal" e2e step. Remove it
+#     once BE-3's upstream :kotlin-encoder PR lands on Maven Central (see
+#     .github/mavenlocal/README.md); mavenCentral() will then resolve it directly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'POST-bump verb applied to main AFTER this release (sets the NEXT vue-ui version). Not the version shipped now.'
+        type: choice
+        required: true
+        default: prerelease
+        options:
+          - patch
+          - minor
+          - major
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
+          - explicit
+      preid:
+        description: 'Prerelease channel for the POST-bump — only used by the pre*/prerelease verbs'
+        type: choice
+        required: false
+        default: alpha
+        options:
+          - alpha
+          - beta
+          - rc
+      explicit_version:
+        description: 'Exact NEXT version (e.g. 0.2.0-alpha.0) for the POST-bump — only used when bump = explicit'
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  # Gate 1 — mirror of the repo's Tests-and-Lint job. No root `lint` script exists
+  # in galvanized (lint is per-package via oxlint/eslint), so only `pnpm test` runs.
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        node-version: [24.x]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run Tests
+        run: pnpm test
+
+  # Gate 2 — the Koog + ADK Playwright end-to-end tests against Google AI Studio.
+  # galvanized consumes @gaunt-sloth/* from npm (not file:), so NO gaunt-sloth
+  # checkout is needed here.
+  e2e:
+    name: E2E (Koog + ADK, Google AI Studio)
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout galvanized-pukeko
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: 'pnpm'
+
+      # ---- TEMPORARY: build the AG-UI EventEncoder to mavenLocal from the fork ----
+      # :kotlin-encoder is not on Maven Central yet (BE-3 upstream PR pending). The
+      # Koog example + ADK agent depend on com.ag-ui.community:{kotlin-core,
+      # kotlin-encoder}:0.4.1. Publish JVM-only (no Android SDK) using the two
+      # override files in .github/mavenlocal/. Remove this whole step + that dir once
+      # the encoder is on Maven Central. Recipe: .github/mavenlocal/README.md.
+      - name: Checkout ag-ui fork (encoder branch)
+        uses: actions/checkout@v6
+        with:
+          repository: andruhon/ag-ui
+          ref: feat/kotlin-encoder-server-integrations
+          path: _agui-fork
+      - name: Build AG-UI encoder to mavenLocal (JVM-only, no Android SDK)
+        env:
+          # setup-java exports JAVA_HOME_21_X64 for the Temurin 21 it installed.
+          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+        run: |
+          set -euo pipefail
+          LIB="$GITHUB_WORKSPACE/_agui-fork/sdks/community/kotlin/library"
+          cp "$GITHUB_WORKSPACE/.github/mavenlocal/core-jvmonly.build.gradle.kts" "$LIB/core/build.gradle.kts"
+          cp "$GITHUB_WORKSPACE/.github/mavenlocal/settings-core-encoder.gradle.kts" "$LIB/settings.gradle.kts"
+          cd "$LIB"
+          ./gradlew :kotlin-core:publishToMavenLocal :kotlin-encoder:publishToMavenLocal --no-daemon --console=plain
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # gemini-flash-lite-latest: the dev key 404s on the pinned gemini-2.5-flash
+      # ("no longer available to new users"); a fresh CI key may allow 2.5-flash, so
+      # the model is kept as a one-line env override (GOOGLE_MODEL / PUKEKO_AI_MODEL).
+      - name: Koog e2e
+        env:
+          LLM_PROVIDER: google
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GOOGLE_MODEL: gemini-flash-lite-latest
+          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+        run: node it-koog.js
+
+      - name: ADK e2e
+        # it-adk.js already sets GOOGLE_GENAI_USE_VERTEXAI=false internally.
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PUKEKO_AI_MODEL: gemini-flash-lite-latest
+          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+        run: node it-adk.js
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            **/playwright-report/**
+            **/test-results/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Gate 3 — ship the CURRENT vue-ui version via OIDC, then post-bump main to next.
+  release:
+    name: Publish vue-ui (OIDC), then post-bump main
+    needs: e2e
+    runs-on: ubuntu-latest
+    # Must match the Environment name in npm's Trusted Publisher config: OIDC only
+    # mints a token for a job running in this exact environment (+ repo + workflow
+    # filename). Andrew: set the npm trusted publisher's environment to `release`.
+    environment: release
+    permissions:
+      contents: write # push the vue-ui tag + the post-bump commit to main
+      id-token: write # npm Trusted Publishing (OIDC) + provenance
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          # Post-bump pushes to main as github-actions[bot] via the default
+          # GITHUB_TOKEN (contents: write). If galvanized gains a branch ruleset
+          # that rejects the bot push (as gaunt-sloth's CodeQL ruleset does — sloth
+          # uses a deploy key to bypass it), add a bypass actor / deploy key for
+          # this repo. ANDREW-FOLLOW-UP; does not block the publish above.
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: 'pnpm'
+          # registry-url writes an OIDC-aware .npmrc for the publish. NOTE: this is
+          # the OPPOSITE of gaunt-sloth's release job, which omits registry-url to
+          # avoid an .npmrc referencing an unset ${NODE_AUTH_TOKEN}. That footgun is
+          # gone on npm >= 11.5.1 (Node 24's bundled npm 11.x), which auto-detects
+          # the OIDC environment and exchanges the id-token itself — no NODE_AUTH_TOKEN
+          # is read. The `npm install -g npm@latest` step below guarantees that floor.
+          registry-url: 'https://registry.npmjs.org'
+      - name: Ensure npm supports OIDC Trusted Publishing (>= 11.5.1)
+        run: npm install -g npm@latest
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Read CURRENT version to ship (and derive its dist-tag)
+        id: current
+        run: |
+          set -euo pipefail
+          PKG=packages/galvanized-pukeko-vue-ui/package.json
+          VERSION="$(node -p "require('./$PKG').version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # prerelease -> its preid (alpha/beta/rc); stable -> latest.
+          DIST_TAG="$(node -p "const s=require('semver');const p=s.prerelease(require('./$PKG').version);p?(p.find(x=>typeof x==='string')||'latest'):'latest'")"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          if [ -n "$(node -p "require('semver').prerelease('$VERSION')?1:''")" ]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Shipping vue-ui version=$VERSION dist_tag=$DIST_TAG"
+
+      - name: Build vue-ui
+        run: pnpm --filter @galvanized-pukeko/vue-ui build
+
+      - name: Publish vue-ui to npm via OIDC (Trusted Publishing)
+        working-directory: packages/galvanized-pukeko-vue-ui
+        # No NPM_TOKEN: the OIDC id-token supplies the credential. Explicit --tag
+        # (belt-and-suspenders with publishConfig.tag written by bump-vue-ui.mjs) so
+        # a prerelease never lands on `latest`.
+        run: npm publish --access public --provenance --tag ${{ steps.current.outputs.dist_tag }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.current.outputs.version }}
+          IS_PRERELEASE: ${{ steps.current.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          PRE_FLAG=""
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            PRE_FLAG="--prerelease"
+          fi
+          # vue-ui- prefixed tag so it can't collide with any future package tags.
+          gh release create "vue-ui-v${VERSION}" --title "vue-ui v${VERSION}" --generate-notes $PRE_FLAG
+
+      # ----- Only after a successful publish: move main to the NEXT version -----
+      - name: Post-bump main to the next version
+        id: postbump
+        env:
+          BUMP: ${{ inputs.bump }}
+          PREID: ${{ inputs.preid }}
+          EXPLICIT_VERSION: ${{ inputs.explicit_version }}
+        run: |
+          set -euo pipefail
+          if [ "$BUMP" = "explicit" ]; then
+            if [ -z "$EXPLICIT_VERSION" ]; then
+              echo "::error::bump=explicit requires a non-empty explicit_version (e.g. 0.2.0-alpha.0)" >&2
+              exit 1
+            fi
+            pnpm run release:bump-and-commit -- "$EXPLICIT_VERSION"
+          else
+            pnpm run release:bump-and-commit -- "$BUMP" "$PREID"
+          fi
+          NEXT="$(node -p "require('./packages/galvanized-pukeko-vue-ui/package.json').version")"
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "main now carries next vue-ui version=$NEXT"
+
+      - name: Push post-bump commit to main
+        run: git push origin HEAD:main
