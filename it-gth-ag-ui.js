@@ -6,8 +6,17 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const GTH_API_HEALTH_URL = 'http://localhost:3000/health';
-const WEB_URL = 'http://localhost:5555';
+// OPS-8: load the worktree-root `.env`. GTH_AGUI_PORT drives the gaunt-sloth AG-UI
+// server + the web client's AGUI_URL target; WEB_PORT drives the vite dev server.
+// NOTE: at time of writing galvanized's generated `.env` carries WEB_PORT but not
+// GTH_AGUI_PORT (that var lives in gaunt-sloth's `.env`), so this falls back to
+// 3000 today — flagged to the coordinator. Inline env vars still win.
+try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
+const GTH_AGUI_PORT = process.env.GTH_AGUI_PORT || '3000';
+const WEB_PORT = process.env.WEB_PORT || '5555';
+const GTH_API_HEALTH_URL = `http://localhost:${GTH_AGUI_PORT}/health`;
+const AGUI_URL = `http://localhost:${GTH_AGUI_PORT}/agents/default/run`;
+const WEB_URL = `http://localhost:${WEB_PORT}`;
 const READY_TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -29,7 +38,7 @@ function startGthAgUi() {
     [
       'gaunt-sloth-api',
       'ag-ui',
-      '--port', '3000',
+      '--port', GTH_AGUI_PORT,
       '--config', resolve(__dirname, 'examples/pukeko-gaunt-sloth-ag-ui/.gsloth.config.json'),
     ],
     {
@@ -48,10 +57,14 @@ function startGthAgUi() {
 
 function startWebClient() {
   console.log('Starting Web Client...');
-  const proc = spawn('npm', ['run', 'web-ag-ui'], {
+  // Point the web client at the (possibly shifted) gaunt-sloth AG-UI URL. We spawn
+  // the web-client dev directly with AGUI_URL in env (mirrors it-koog.js) rather
+  // than the `web-ag-ui` script, whose inline `AGUI_URL=…:3000` would shadow it.
+  const proc = spawn('pnpm', ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'], {
     cwd: __dirname,
     stdio: 'inherit',
     detached: true,
+    env: { ...process.env, AGUI_URL },
   });
   proc.on('error', err => console.error(`[Web Client] ${err.message}`));
   return proc;

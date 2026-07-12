@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
 //   - user message: [data-testid="copilot-user-message"]
 test.describe('Chat Interface (Gaunt Sloth AG-UI, stock CopilotKit UI)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:5555/?ui=stock');
+        await page.goto('/?ui=stock');
         await expect(
             page.locator('[data-testid="copilot-chat-input-textarea"]')
         ).toBeVisible({ timeout: 30000 });

@@ -7,7 +7,12 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const WEB_URL = 'http://localhost:5555';
+// OPS-8: load the worktree-root `.env` (web + ADK ports + ADK CORS). Inline wins.
+try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
+const WEB_PORT = process.env.WEB_PORT || '5555';
+const WEB_URL = `http://localhost:${WEB_PORT}`;
+const ADK_PORT = process.env.ADK_PORT || '8080';
+const ADK_CORS_ORIGINS = process.env.ADK_CORS_ORIGINS || 'http://localhost:5555,https://localhost:5555';
 const READY_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -26,7 +31,7 @@ function startAdkAgent() {
   const logStream = createWriteStream(logPath, { flags: 'w' });
   const proc = spawn(
     './mvnw',
-    ['clean', 'compile', 'exec:java', '-Dexec.classpathScope=compile', '-Dexec.args=--server.port=8080 --adk.agents.source-dir=target'],
+    ['clean', 'compile', 'exec:java', '-Dexec.classpathScope=compile', `-Dexec.args=--server.port=${ADK_PORT} --adk.web.cors.origins=${ADK_CORS_ORIGINS} --adk.agents.source-dir=target`],
     { cwd: resolve(__dirname, 'packages/galvanized-pukeko-agent-adk'), stdio: ['inherit', 'pipe', 'pipe'], detached: true }
   );
 
@@ -92,7 +97,7 @@ try {
     waitForUrl(WEB_URL, 'Web Client'),
   ]);
   console.log('\nAll services ready.');
-  console.log(`  ADK Agent : http://localhost:8080`);
+  console.log(`  ADK Agent : http://localhost:${ADK_PORT}`);
   console.log(`  Web Client: ${WEB_URL}`);
   console.log('\nPress Ctrl+C to stop.\n');
 } catch (err) {

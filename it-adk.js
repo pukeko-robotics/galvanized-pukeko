@@ -7,7 +7,13 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const WEB_URL = 'http://localhost:5555';
+// OPS-8: load the worktree-root `.env` so a shifted allocation moves the web +
+// ADK ports (and the ADK CORS origin list) together. Inline env vars still win.
+try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
+const WEB_PORT = process.env.WEB_PORT || '5555';
+const WEB_URL = `http://localhost:${WEB_PORT}`;
+const ADK_PORT = process.env.ADK_PORT || '8080';
+const ADK_CORS_ORIGINS = process.env.ADK_CORS_ORIGINS || 'http://localhost:5555,https://localhost:5555';
 const READY_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -43,7 +49,7 @@ function startAdkAgent() {
   const proc = spawn(
     './mvnw',
     ['clean', 'compile', 'exec:java', '-Dexec.classpathScope=compile',
-     `-Dexec.args=--server.port=8080 --adk.agents.source-dir=target --pukeko.ai.model=${PUKEKO_AI_MODEL}`],
+     `-Dexec.args=--server.port=${ADK_PORT} --adk.web.cors.origins=${ADK_CORS_ORIGINS} --adk.agents.source-dir=target --pukeko.ai.model=${PUKEKO_AI_MODEL}`],
     {
       cwd: resolve(__dirname, 'packages/galvanized-pukeko-agent-adk'),
       stdio: ['inherit', 'pipe', 'pipe'],

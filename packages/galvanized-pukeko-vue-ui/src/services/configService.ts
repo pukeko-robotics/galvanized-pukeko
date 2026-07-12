@@ -36,8 +36,17 @@ class ConfigService {
         throw new Error(response.statusText)
       }
       const config = await response.json()
-      if (config.configUrl) {
-        const fallbackResponse = await fetch(config.configUrl);
+      // OPS-8: allow the ADK config endpoint to be overridden at build time via
+      // __ADK_URL__ (from ADK_URL/ADK_PORT in the web-client build). When defined
+      // it wins over config.json's static configUrl so the target tracks a shifted
+      // ADK port; at offset 0 it equals http://localhost:8080/config.json, i.e. the
+      // committed static value (byte-identical). Undefined (vue-ui built standalone
+      // or consumed by the robot controller) keeps the original behavior.
+      // @ts-expect-error Vite define injects this at build time
+      const builtInAdkUrl = typeof __ADK_URL__ !== 'undefined' ? __ADK_URL__ : ''
+      const effectiveConfigUrl = builtInAdkUrl ? `${builtInAdkUrl}/config.json` : config.configUrl
+      if (effectiveConfigUrl) {
+        const fallbackResponse = await fetch(effectiveConfigUrl);
         if (!fallbackResponse.ok) {
           throw new Error(fallbackResponse.statusText)
         }

@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 // Selectors are the data-testids on HeadlessChat.vue.
 test.describe('Chat Interface (Gaunt Sloth AG-UI, headless CopilotKit mode)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:5555/?ui=headless');
+        await page.goto('/?ui=headless');
         await expect(
             page.locator('[data-testid="pk-headless-chat"]')
         ).toBeVisible({ timeout: 30000 });

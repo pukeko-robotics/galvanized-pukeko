@@ -14,8 +14,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const KOOG_EXAMPLE_DIR = resolve(__dirname, 'examples/pukeko-koog-ag-ui');
 const KOOG_AGENT_DIR = resolve(KOOG_EXAMPLE_DIR, 'koog-agent');
-const AGUI_PORT = 3000;
-const WEB_PORT = 5555;
+// OPS-8: load the worktree-root `.env` so the Koog AG-UI port + web port shift
+// together (offset 0 == today's 3000 / 5555). Inline env vars still win.
+try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
+const AGUI_PORT = Number(process.env.AGUI_PORT) || 3000;
+const WEB_PORT = Number(process.env.WEB_PORT) || 5555;
 const WEB_URL = `http://localhost:${WEB_PORT}`;
 const HEALTH_URL = `http://localhost:${AGUI_PORT}/health`;
 const AGUI_URL = `http://localhost:${AGUI_PORT}/agents/default/run`;

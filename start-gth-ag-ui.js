@@ -6,8 +6,16 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const GTH_API_HEALTH_URL = 'http://localhost:3000/health';
-const WEB_URL = 'http://localhost:5555';
+// OPS-8: load the worktree-root `.env`. GTH_AGUI_PORT drives the gaunt-sloth AG-UI
+// server + the web client's AGUI_URL target; WEB_PORT drives vite. galvanized's
+// `.env` carries WEB_PORT but not GTH_AGUI_PORT today (falls back to 3000) —
+// flagged to the coordinator. Inline env vars still win.
+try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
+const GTH_AGUI_PORT = process.env.GTH_AGUI_PORT || '3000';
+const WEB_PORT = process.env.WEB_PORT || '5555';
+const GTH_API_HEALTH_URL = `http://localhost:${GTH_AGUI_PORT}/health`;
+const AGUI_URL = `http://localhost:${GTH_AGUI_PORT}/agents/default/run`;
+const WEB_URL = `http://localhost:${WEB_PORT}`;
 const READY_TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 2_000;
 
@@ -29,7 +37,7 @@ function startGthAgUi() {
     [
       'gaunt-sloth-api',
       'ag-ui',
-      '--port', '3000',
+      '--port', GTH_AGUI_PORT,
       '--config', resolve(__dirname, 'examples/pukeko-gaunt-sloth-ag-ui/.gsloth.config.json'),
     ],
     {
@@ -69,10 +77,14 @@ function killGroup(proc) {
 const gthProc = startGthAgUi();
 
 console.log('Starting Web Client...');
-const webProc = spawn('npm', ['run', 'web-ag-ui'], {
+// Point the web client at the (possibly shifted) gaunt-sloth AG-UI URL via env,
+// spawning web-client dev directly (the `web-ag-ui` script's inline AGUI_URL would
+// shadow an inherited one).
+const webProc = spawn('pnpm', ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'], {
   cwd: __dirname,
   stdio: 'inherit',
   detached: true,
+  env: { ...process.env, AGUI_URL },
 });
 webProc.on('error', err => console.error(`[Web Client] ${err.message}`));
 
@@ -91,7 +103,7 @@ try {
     waitForUrl(WEB_URL, 'Web Client'),
   ]);
   console.log('\nAll services ready.');
-  console.log(`  Gaunt Sloth AG-UI: http://localhost:3000`);
+  console.log(`  Gaunt Sloth AG-UI: http://localhost:${GTH_AGUI_PORT}`);
   console.log(`  Web Client       : ${WEB_URL}`);
   console.log('\nPress Ctrl+C to stop.\n');
 } catch (err) {

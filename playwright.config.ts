@@ -11,7 +11,8 @@ export default defineConfig({
     ['html', { open: 'never' }]
   ],
   use: {
-    baseURL: 'http://localhost:5555',
+    // OPS-8: track the shifted vite port (WEB_PORT); the it-*.js harnesses load `.env`.
+    baseURL: `http://localhost:${process.env.WEB_PORT || 5555}`,
     trace: 'on-first-retry',
   },
   projects: [

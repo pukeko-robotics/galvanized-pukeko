@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Chat Interface (Gaunt Sloth AG-UI)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:5555');
+        await page.goto('/');
         await expect(page.locator('.chat-interface')).toBeVisible();
     });
 

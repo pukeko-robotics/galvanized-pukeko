@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 // spec covers ONLY the text round-trip (Button / Enter) + static UI. No A2UI-surface test.
 test.describe('Koog AG-UI Chat Interface', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:5555');
+        await page.goto('/');
         await expect(page.locator('.chat-interface')).toBeVisible();
     });
 
