@@ -78,8 +78,8 @@ await waitForReady(`http://localhost:${AGUI_PORT}/health`, 'Koog AG-UI server');
 // Start the web client, pointed at the Koog server.
 console.log(`Starting web client on port ${WEB_PORT}...`);
 const webProc = spawn(
-  'npm',
-  ['run', 'dev', '-w', 'packages/galvanized-pukeko-web-client', '--', '--port', String(WEB_PORT), '--strictPort'],
+  'pnpm',
+  ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'],
   {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],

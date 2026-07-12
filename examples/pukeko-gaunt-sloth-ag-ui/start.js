@@ -77,8 +77,8 @@ await waitForReady(`http://localhost:${AGUI_PORT}/health`, 'Gaunt Sloth');
 // Start web client
 console.log(`Starting web client on port ${WEB_PORT}...`);
 const webProc = spawn(
-  'npm',
-  ['run', 'dev', '-w', 'packages/galvanized-pukeko-web-client'],
+  'pnpm',
+  ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'],
   {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
