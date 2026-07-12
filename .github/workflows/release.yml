@@ -184,6 +184,22 @@ jobs:
       contents: write # push the vue-ui tag + the post-bump commit to main
       id-token: write # npm Trusted Publishing (OIDC) + provenance
     steps:
+      # Fail BEFORE the irreversible publish, not after. `explicit_version` is the
+      # only free-text input (bump/preid are `choice`), so a blank one with
+      # bump=explicit is the sole way a bad input reaches here. If the check lived
+      # only in the post-bump step (below), we'd publish, THEN abort un-bumped, and a
+      # re-dispatch would re-publish the same version → npm 409, wedging the pipeline.
+      - name: Validate release inputs (before publish)
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXPLICIT_VERSION: ${{ inputs.explicit_version }}
+        run: |
+          set -euo pipefail
+          if [ "$BUMP" = "explicit" ] && [ -z "$EXPLICIT_VERSION" ]; then
+            echo "::error::bump=explicit requires a non-empty explicit_version (e.g. 0.2.0-alpha.0). Refusing to publish." >&2
+            exit 1
+          fi
+          echo "Inputs OK: bump=$BUMP explicit_version='${EXPLICIT_VERSION}'"
       - uses: actions/checkout@v6
         with:
           ref: main
@@ -255,7 +271,14 @@ jobs:
             PRE_FLAG="--prerelease"
           fi
           # vue-ui- prefixed tag so it can't collide with any future package tags.
-          gh release create "vue-ui-v${VERSION}" --title "vue-ui v${VERSION}" --generate-notes $PRE_FLAG
+          # Idempotent: publish already succeeded and can't be re-run for this
+          # version, so if a prior run died between publish and post-bump, a
+          # re-dispatch must not fail here on an already-existing release.
+          if gh release view "vue-ui-v${VERSION}" >/dev/null 2>&1; then
+            echo "Release vue-ui-v${VERSION} already exists — skipping create (idempotent re-dispatch)."
+          else
+            gh release create "vue-ui-v${VERSION}" --title "vue-ui v${VERSION}" --generate-notes $PRE_FLAG
+          fi
 
       # ----- Only after a successful publish: move main to the NEXT version -----
       - name: Post-bump main to the next version
