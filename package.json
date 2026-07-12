@@ -22,9 +22,13 @@
     "sink": "pnpm --filter @galvanized-pukeko/web-client run sink",
     "it-adk": "node it-adk.js",
     "it-adk-headed": "node it-adk.js --headed",
+    "it-koog": "node it-koog.js",
+    "it-koog-headed": "node it-koog.js --headed",
     "it-gth-ag-ui": "node it-gth-ag-ui.js",
     "start-adk": "node start-adk.js",
-    "start-gth-ag-ui": "node start-gth-ag-ui.js"
+    "start-gth-ag-ui": "node start-gth-ag-ui.js",
+    "release:bump": "node scripts/bump-vue-ui.mjs",
+    "release:bump-and-commit": "node scripts/bump-vue-ui.mjs --commit"
   },
   "dependencies": {
     "@gaunt-sloth/agent": "2.0.0-alpha.5",
@@ -55,6 +59,7 @@
     "jsdom": "^26.1.0",
     "oxlint": "^0.16.12",
     "prettier": "^3.8.4",
+    "semver": "^7.6.3",
     "typescript": "^5.9.3",
     "vite": "^8.0.16",
     "vite-plugin-vue-devtools": "^8.1.3",
