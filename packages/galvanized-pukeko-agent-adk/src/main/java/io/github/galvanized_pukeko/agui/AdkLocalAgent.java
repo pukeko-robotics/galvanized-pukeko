@@ -24,6 +24,7 @@ import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -212,8 +213,17 @@ public class AdkLocalAgent implements AgUiAgentRunner {
         }
     }
 
-    /** Frames one event as the unframed JSON body and lets {@code SseEmitter} add the {@code data:} line. */
+    /**
+     * Frames one event as the unframed JSON body and lets {@code SseEmitter} add the {@code data:} line.
+     *
+     * <p>The {@code TEXT_PLAIN} media type is required: {@code encodeToJson} already returns a JSON
+     * String, and {@code SseEmitter.event().data(String)} with the default (null) media type lets
+     * Spring pick the Jackson converter, which re-serializes the String — emitting a double-encoded
+     * {@code data:"{\"type\":...}"} that an {@code @ag-ui/client} SSE parser rejects with a ZodError.
+     * Forcing {@code text/plain} selects {@code StringHttpMessageConverter}, writing the raw JSON as
+     * {@code data:{"type":...}} — the canonical AG-UI frame the vue web client expects.
+     */
     private void send(SseEmitter emitter, EventEncoder encoder, BaseEvent event) throws IOException {
-        emitter.send(SseEmitter.event().data(encoder.encodeToJson(event)).build());
+        emitter.send(SseEmitter.event().data(encoder.encodeToJson(event), MediaType.TEXT_PLAIN).build());
     }
 }
