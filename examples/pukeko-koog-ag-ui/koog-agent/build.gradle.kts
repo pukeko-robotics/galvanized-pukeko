@@ -29,6 +29,9 @@ dependencies {
     // Ktor server (the web framework half of the "encoder + framework" recipe).
     implementation("io.ktor:ktor-server-core:$ktorVersion")
     implementation("io.ktor:ktor-server-cio:$ktorVersion")
+    // CORS: the AG-UI web client runs cross-origin (browser :5555 -> server :3000),
+    // so the server must answer the preflight. Mirrors the gaunt-sloth AG-UI server.
+    implementation("io.ktor:ktor-server-cors:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     implementation("ch.qos.logback:logback-classic:1.5.13")
 
