@@ -34,7 +34,7 @@
 
   <!-- Specify the version of Java you'll be using -->
   <properties>
-    <!-- JDK 21 required: the AG-UI kotlin-core/kotlin-encoder artifacts are JVM-21 bytecode. -->
+    <!-- JDK 21 required: the AG-UI kotlin-core artifact is JVM-21 bytecode. -->
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -95,16 +95,13 @@
       <version>4.0.2</version>
     </dependency>
 
-    <!-- AG-UI Kotlin SDK: core types + AgUiJson (KMP jvm coordinates: the -jvm suffix). -->
+    <!-- AG-UI Kotlin SDK: core types + AgUiJson (KMP jvm coordinates: the -jvm suffix).
+         The EventEncoder is vendored (Java reimpl) in this package (see EventEncoder.java, BE-7)
+         instead of pulling com.ag-ui.community:kotlin-encoder-jvm — swap back to that dependency
+         when BE-3's upstream :kotlin-encoder PR publishes to Maven Central. -->
     <dependency>
       <groupId>com.ag-ui.community</groupId>
       <artifactId>kotlin-core-jvm</artifactId>
-      <version>${agui.version}</version>
-    </dependency>
-    <!-- AG-UI Kotlin SDK: EventEncoder (encode / encodeToJson). -->
-    <dependency>
-      <groupId>com.ag-ui.community</groupId>
-      <artifactId>kotlin-encoder-jvm</artifactId>
       <version>${agui.version}</version>
     </dependency>
     <!--

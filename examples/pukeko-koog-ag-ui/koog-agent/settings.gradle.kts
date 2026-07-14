@@ -9,9 +9,9 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
-        // The AG-UI Kotlin SDK (:kotlin-core, :kotlin-encoder) is consumed from the
-        // local Maven cache, published there by the coordinator. Koog + ktor come
-        // from Maven Central.
+        // The AG-UI Kotlin SDK :kotlin-core is consumed from the local Maven cache,
+        // published there by the coordinator. The EventEncoder is vendored (BE-7), so
+        // :kotlin-encoder is no longer required. Koog + ktor come from Maven Central.
         mavenLocal()
         mavenCentral()
     }

@@ -3,7 +3,6 @@ package com.pukeko.example.koog
 import com.agui.core.types.AgUiJson
 import com.agui.core.types.BaseEvent
 import com.agui.core.types.RunAgentInput
-import com.agui.encoder.EventEncoder
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
