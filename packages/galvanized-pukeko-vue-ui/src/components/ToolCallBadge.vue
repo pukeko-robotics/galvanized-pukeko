@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { MessagePart } from '../services/chatService'
-
-type ToolCallPart = Extract<MessagePart, { kind: 'tool-call' }>
+import type { ToolCallPart } from '../services/chatService'
+import { getToolDisplay, toolDisplayLabel } from './toolDisplay'
+import ToolResultGeneric from './ToolResultGeneric.vue'
 
 const props = defineProps<{
   part: ToolCallPart
@@ -29,22 +29,32 @@ const prettyArgs = computed(() => {
   }
 })
 
-const prettyResult = computed(() => {
-  const r = props.part.result
-  if (r == null) return ''
+// Per-tool display entry (PLAT-17). Unregistered tools resolve to `undefined`
+// and fall through to the default label / generic result renderer.
+const display = computed(() => getToolDisplay(props.part.toolCallName))
+
+const headerLabel = computed(() => toolDisplayLabel(props.part.toolCallName, display.value))
+
+const paramSummary = computed(() => {
   try {
-    return JSON.stringify(JSON.parse(r), null, 2)
+    return display.value?.summariseParams?.(props.part) ?? ''
   } catch {
-    return r
+    return ''
   }
 })
+
+// The component that renders the result: a registered custom renderer, else the
+// generic JSON/text fallback. Custom renderers receive `{ part }`.
+const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultGeneric)
 </script>
 
 <template>
   <div class="tool-call-badge" :class="{ expanded }">
     <button class="tool-call-header" @click="toggle" :aria-expanded="expanded">
       <span class="tool-call-arrow" :class="{ expanded }">&#9658;</span>
-      <span class="tool-call-label">Used {{ props.part.toolCallName }} tool</span>
+      <span v-if="display?.glyph" class="tool-call-glyph" aria-hidden="true">{{ display.glyph }}</span>
+      <span class="tool-call-label">{{ headerLabel }}</span>
+      <span v-if="paramSummary" class="tool-call-summary">{{ paramSummary }}</span>
       <span v-if="props.part.status === 'pending'" class="tool-call-dot" aria-label="running"></span>
     </button>
     <div v-if="expanded" class="tool-call-body">
@@ -54,7 +64,7 @@ const prettyResult = computed(() => {
       </template>
       <template v-if="props.part.result != null">
         <div class="tool-call-section-label">Result</div>
-        <pre class="tool-call-pre">{{ prettyResult }}</pre>
+        <component :is="resultRenderer" :part="props.part" />
       </template>
     </div>
   </div>
@@ -112,8 +122,23 @@ const prettyResult = computed(() => {
   transform: rotate(90deg);
 }
 
+.tool-call-glyph {
+  flex-shrink: 0;
+  line-height: 1;
+}
+
 .tool-call-label {
   color: #1e40af;
+}
+
+.tool-call-summary {
+  color: #3b82f6;
+  font-weight: 400;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .tool-call-dot {

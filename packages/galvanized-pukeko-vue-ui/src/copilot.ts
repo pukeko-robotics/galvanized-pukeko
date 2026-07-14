@@ -27,3 +27,18 @@ export {
 export type { UiMode, A2UITarget } from './copilot/types'
 export { toBubbles } from './copilot/useHeadlessChat'
 export type { ChatBubble, AgentMessageLike } from './copilot/useHeadlessChat'
+
+// Per-tool display registry (PLAT-17). Re-exported here as well as from the
+// library root so a consumer importing the headless surface from this sub-path
+// can register renderers against the SAME registry the shared ToolCallBadge
+// reads (the registry is anchored on globalThis, so the two bundles share one
+// instance). See `toolDisplay.ts` for the full rationale.
+export {
+  registerToolDisplay,
+  registerToolDisplays,
+  getToolDisplay,
+  hasToolDisplay,
+  resetToolDisplays,
+  toolDisplayLabel,
+} from './components/toolDisplay'
+export type { ToolDisplayEntry, ToolResultRendererProps } from './components/toolDisplay'

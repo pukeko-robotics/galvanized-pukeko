@@ -46,7 +46,29 @@ export {
 }
 
 export { runState, statusText, chatService } from './services/chatService'
-export type { RunState, Message, Tool, UserMessage } from './services/chatService'
+export type { RunState, Message, Tool, UserMessage, ToolCallPart } from './services/chatService'
+
+// Per-tool display registry (PLAT-17) — lets a consumer register a bespoke
+// result renderer / summariser / glyph for its own tool WITHOUT patching vue-ui.
+// The shared ToolCallBadge dispatches on it (custom renderer or generic
+// fallback). Re-exported from BOTH `index.ts` and `./copilot` so registration
+// hits the same (globalThis-anchored) registry whichever entry a consumer
+// imports from. See docs `registry usage note`.
+import ToolCallBadge from './components/ToolCallBadge.vue'
+import ToolResultGeneric from './components/ToolResultGeneric.vue'
+export { ToolCallBadge, ToolResultGeneric }
+export {
+  registerToolDisplay,
+  registerToolDisplays,
+  getToolDisplay,
+  hasToolDisplay,
+  resetToolDisplays,
+  toolDisplayLabel,
+} from './components/toolDisplay'
+export type {
+  ToolDisplayEntry,
+  ToolResultRendererProps,
+} from './components/toolDisplay'
 
 // A2UI bridge — exported so host apps (e.g. the CopilotKit stock-UI mode in the
 // web-client) can render agent-driven A2UI surfaces using the same processor

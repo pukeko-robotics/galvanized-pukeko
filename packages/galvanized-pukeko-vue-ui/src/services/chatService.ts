@@ -35,6 +35,9 @@ export type MessagePart =
       status: 'pending' | 'complete'
     }
 
+/** A single tool-call part of an assistant message (call + optional result). */
+export type ToolCallPart = Extract<MessagePart, { kind: 'tool-call' }>
+
 export interface AssistantStreamingMessage {
   id: string
   parts: MessagePart[]

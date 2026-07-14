@@ -45,6 +45,43 @@ When the agent calls the `show_a2ui_surface` tool, `CoreApp` renders the returne
 into the content area, and submits user interactions back to the agent. This is handled internally;
 you don't wire it up manually when using `CoreApp`.
 
+## Tool-call display registry
+
+When a tool call appears in the chat, `ToolCallBadge` shows the tool name, status, and — on
+expand — the arguments and the **result**. A long result is collapsed to a first-N-lines preview
+with an overflow marker and a per-call **Show more / Show less** toggle (progressive disclosure).
+
+By default the result is rendered by a generic JSON/text renderer (`ToolResultGeneric`). A host app
+can register a **bespoke renderer for its own tool** — without patching the library — through the
+display registry:
+
+```ts
+import { registerToolDisplay } from '@galvanized-pukeko/vue-ui'
+// (or from '@galvanized-pukeko/vue-ui/copilot' — same registry, either entry works)
+import CaptureImageResult from './CaptureImageResult.vue'
+
+const unregister = registerToolDisplay('capture_image', {
+  glyph: '📷',                                   // leading header glyph
+  label: 'Captured image',                       // string, or (toolName) => string
+  summariseParams: (part) =>                      // short inline summary in the header
+    (part.args as { camera?: string }).camera ?? '',
+  renderResult: CaptureImageResult,              // Vue component; receives { part }
+})
+```
+
+- **Entry shape** — `ToolDisplayEntry`: `{ renderResult?, summariseParams?, glyph?, label? }`. Every
+  field is optional; an unregistered tool (or an entry with no `renderResult`) uses the generic
+  fallback and the default `Used <name> tool` header.
+- **Renderer props** — a custom `renderResult` component receives `ToolResultRendererProps`
+  (`{ part }` — the whole `ToolCallPart`, so it can read `args`, `result`, and `status`).
+- **API** — `registerToolDisplay(name, entry) => unregister`, `registerToolDisplays(record)`,
+  `getToolDisplay(name)`, `hasToolDisplay(name)`, `resetToolDisplays()`. The registry is a single
+  process-wide instance shared by both the library root and the `/copilot` entry, so registration
+  from either import path is seen by every chat surface.
+
+This is the extension point used by the robot controller to render `capture_image` as an inline
+thumbnail and motion tools as before/after images (RC-14).
+
 ## Services
 
 ### `configService`
