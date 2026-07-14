@@ -10,10 +10,10 @@
 import { PukekoCopilot, type UiMode, type A2UITarget } from '@galvanized-pukeko/vue-ui/copilot'
 
 // PLAT-19: the headless A2UI render target. Defaults to the split `panel`
-// (bespoke parity); `?ui=headless` itself stays opt-in (mode selection lives in
-// main.ts — flipping the app default is the separate gated PLAT-12).
+// (bespoke parity). `uiMode` defaults to `headless` — the app default surface
+// as of PLAT-12 (mode selection / `?ui=` override lives in main.ts).
 withDefaults(defineProps<{ uiMode?: UiMode; a2uiTarget?: A2UITarget }>(), {
-  uiMode: 'stock',
+  uiMode: 'headless',
   a2uiTarget: 'panel',
 })
 </script>
