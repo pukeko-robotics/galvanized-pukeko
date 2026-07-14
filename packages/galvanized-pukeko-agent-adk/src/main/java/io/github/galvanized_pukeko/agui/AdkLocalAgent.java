@@ -28,6 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -183,7 +184,7 @@ public class AdkLocalAgent implements AgUiAgentRunner {
                     if (part.functionResponse().isPresent()) {
                         var fr = part.functionResponse().get();
                         String toolCallId = fr.id().orElse(UUID.randomUUID().toString());
-                        String resultContent = fr.response().isPresent() ? fr.response().get().toString() : "";
+                        String resultContent = toolResultContent(fr.response().orElse(null));
                         send(emitter, encoder, new ToolCallResultEvent(
                             messageId, toolCallId, resultContent, null, null, null));
                     }
@@ -226,6 +227,47 @@ public class AdkLocalAgent implements AgUiAgentRunner {
      * browser {@code EventSource} always decodes SSE as UTF-8, so any non-ASCII assistant text
      * (accents, emoji, CJK) would corrupt without this.
      */
+    /**
+     * Serialize an ADK tool-result response into the AG-UI {@code TOOL_CALL_RESULT} content string.
+     *
+     * <p><b>A2UI surfaces (BE-5).</b> The {@code show_a2ui_surface} tool returns a map whose
+     * {@code surfaceJsonl} entry <em>is</em> the renderable A2UI surface: concatenated A2UI JSON
+     * objects ({@code surfaceUpdate}/{@code dataModelUpdate}/{@code beginRendering}). Every vue
+     * client feeds the tool-result <em>content</em> straight into {@code parseA2UIJsonl}, bespoke
+     * {@code ChatInterface.onToolCallResult}, the headless {@code toBubbles}→{@code part.result}
+     * path, and the stock {@code A2UIRenderToolBridge}, so that content must be the raw JSONL
+     * verbatim. When the response carries a String {@code surfaceJsonl} entry we therefore emit
+     * exactly that value, and nothing else.
+     *
+     * <p><b>Every other tool.</b> We serialize the response as JSON via Jackson, never Java
+     * {@code Map.toString()}, whose {@code {k=v}} form is not valid JSON and breaks a JSON-parsing
+     * client (that {@code .toString()} on the A2UI map was the exact BE-5 bug: it emitted
+     * {@code {surfaceJsonl=..., status=surface_rendered}}, which {@code parseA2UIJsonl} then choked on).
+     *
+     * @param response the ADK function-response payload (typically a {@code Map}), or {@code null}
+     * @return the AG-UI tool-result content string (never {@code null})
+     */
+    static String toolResultContent(Object response) {
+        if (response == null) {
+            return "";
+        }
+        // A2UI: unwrap the surfaceJsonl so the client renders the raw surface, not the wrapper map.
+        if (response instanceof Map<?, ?> map) {
+            Object surface = map.get("surfaceJsonl");
+            if (surface instanceof String surfaceJsonl) {
+                return surfaceJsonl;
+            }
+        }
+        // Generic tools: valid JSON, not Java Map.toString()'s {k=v} form.
+        try {
+            return objectMapper.writeValueAsString(response);
+        } catch (Exception e) {
+            log.warn("Could not JSON-serialize tool result ({}); falling back to toString()",
+                e.getMessage());
+            return response.toString();
+        }
+    }
+
     private static final MediaType TEXT_PLAIN_UTF8 = new MediaType("text", "plain", StandardCharsets.UTF_8);
 
     private void send(SseEmitter emitter, EventEncoder encoder, BaseEvent event) throws IOException {

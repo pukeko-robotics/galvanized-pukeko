@@ -48,20 +48,8 @@ test.describe('Chat Interface', () => {
         await expect(page.getByText('Click Send or press Enter to send your message')).toBeVisible();
     });
 
-    // QUARANTINED (BE-5): the bespoke ChatInterface path renders the ADK show_a2ui_surface
-    // tool-result via parseA2UIJsonl, but AdkLocalAgent emits that result as a Java Map.toString()
-    // ({surfaceJsonl=..., status=...}) rather than the raw surface JSONL the client parses, so the
-    // surface never renders. The fix belongs on the HEADLESS CopilotKit surface (A2UIRenderToolBridge),
-    // not this doomed bespoke path (PLAT-12 defaults away from it, PLAT-13 deletes it) — tracked as
-    // BE-5 (deps PLAT-12). Un-skip there. The text-streaming wire above is fully green.
-    test.fixme('should render A2UI form when requested', async ({ page }) => {
-        const input = page.locator('input[name="chat-input"]');
-        await input.fill('Show me a contact form with a name and an email field using the show_a2ui_surface tool');
-        await input.press('Enter');
-
-        await expect(page.locator('.is-loading')).not.toBeVisible({ timeout: 30000 });
-
-        // Wait for A2UI surface to appear
-        await expect(page.locator('.a2ui-surface')).toBeVisible({ timeout: 30000 });
-    });
+    // A2UI render coverage moved to the SURVIVING headless surface (chat-gth-headless.spec.ts, BE-5).
+    // The bespoke ChatInterface path this spec exercises is defaulted away by PLAT-12 and deleted by
+    // PLAT-13, so a bespoke A2UI render test would assert on a doomed surface; the previously
+    // quarantined `should render A2UI form` fixme was removed with the fix rather than un-skipped here.
 });
