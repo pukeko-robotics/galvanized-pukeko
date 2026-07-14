@@ -24,9 +24,10 @@ name: Release
 # │   1. Repo secret GOOGLE_API_KEY  (Google AI Studio key) — the e2e job needs it.
 # │   2. npm Trusted Publisher for @galvanized-pukeko/vue-ui, bound to this repo +
 # │      workflow file (release.yml) + environment `release` — the publish step needs it.
-# └─ Also temporary: the "Build the AG-UI encoder to mavenLocal" e2e step. Remove it
-#     once BE-3's upstream :kotlin-encoder PR lands on Maven Central (see
-#     .github/mavenlocal/README.md); mavenCentral() will then resolve it directly.
+# └─ Also temporary: the "Build AG-UI kotlin-core to mavenLocal" e2e step. The encoder
+#     is now vendored into the consumers (BE-7), so this builds kotlin-core ONLY. Remove
+#     the whole step once kotlin-core is on Maven Central (see .github/mavenlocal/README.md);
+#     mavenCentral() will then resolve it directly.
 
 on:
   workflow_dispatch:
@@ -112,19 +113,20 @@ jobs:
           node-version: '24.x'
           cache: 'pnpm'
 
-      # ---- TEMPORARY: build the AG-UI EventEncoder to mavenLocal from the fork ----
-      # :kotlin-encoder is not on Maven Central yet (BE-3 upstream PR pending). The
-      # Koog example + ADK agent depend on com.ag-ui.community:{kotlin-core,
-      # kotlin-encoder}:0.4.1. Publish JVM-only (no Android SDK) using the two
-      # override files in .github/mavenlocal/. Remove this whole step + that dir once
-      # the encoder is on Maven Central. Recipe: .github/mavenlocal/README.md.
+      # ---- TEMPORARY: build AG-UI kotlin-core to mavenLocal from the fork ----
+      # kotlin-core is not on Maven Central yet (BE-3 upstream PR pending). The Koog
+      # example + ADK agent depend on com.ag-ui.community:kotlin-core:0.4.1. The
+      # EventEncoder is now VENDORED into each consumer (BE-7), so :kotlin-encoder is no
+      # longer built here. Publish JVM-only (no Android SDK) using the two override files
+      # in .github/mavenlocal/. Remove this whole step + that dir once kotlin-core is on
+      # Maven Central. Recipe: .github/mavenlocal/README.md.
       - name: Checkout ag-ui fork (encoder branch)
         uses: actions/checkout@v6
         with:
           repository: andruhon/ag-ui
           ref: feat/kotlin-encoder-server-integrations
           path: _agui-fork
-      - name: Build AG-UI encoder to mavenLocal (JVM-only, no Android SDK)
+      - name: Build AG-UI kotlin-core to mavenLocal (JVM-only, no Android SDK)
         env:
           # setup-java exports JAVA_HOME_21_X64 for the Temurin 21 it installed.
           JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
@@ -134,7 +136,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/.github/mavenlocal/core-jvmonly.build.gradle.kts" "$LIB/core/build.gradle.kts"
           cp "$GITHUB_WORKSPACE/.github/mavenlocal/settings-core-encoder.gradle.kts" "$LIB/settings.gradle.kts"
           cd "$LIB"
-          ./gradlew :kotlin-core:publishToMavenLocal :kotlin-encoder:publishToMavenLocal --no-daemon --console=plain
+          ./gradlew :kotlin-core:publishToMavenLocal --no-daemon --console=plain
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

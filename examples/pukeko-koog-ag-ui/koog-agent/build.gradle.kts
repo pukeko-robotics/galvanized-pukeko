@@ -16,11 +16,12 @@ val serializationVersion = "1.9.0"
 val koogVersion = "1.0.0"
 
 dependencies {
-    // AG-UI SDK from mavenLocal. Gradle module metadata resolves the JVM variant of
-    // these KMP modules for a plain kotlin("jvm") consumer. We depend on the encoder
-    // (the thing under validation) plus core; there is deliberately NO server module.
+    // AG-UI core types from mavenLocal. Gradle module metadata resolves the JVM variant
+    // of this KMP module for a plain kotlin("jvm") consumer. There is deliberately NO
+    // server module. The EventEncoder is vendored (see EventEncoder.kt) rather than
+    // pulled from :kotlin-encoder (BE-7) — swap back to
+    // implementation("com.ag-ui.community:kotlin-encoder:0.4.1") when BE-3's upstream PR publishes.
     implementation("com.ag-ui.community:kotlin-core:0.4.1")
-    implementation("com.ag-ui.community:kotlin-encoder:0.4.1")
 
     // kotlin-core exposes kotlinx-serialization-json only as `implementation`, so a
     // consumer that calls AgUiJson (decode/encode) must depend on it directly.

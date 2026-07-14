@@ -8,7 +8,6 @@ import com.agui.core.types.RunStartedEvent;
 import com.agui.core.types.TextMessageContentEvent;
 import com.agui.core.types.TextMessageEndEvent;
 import com.agui.core.types.TextMessageStartEvent;
-import com.agui.encoder.EventEncoder;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;

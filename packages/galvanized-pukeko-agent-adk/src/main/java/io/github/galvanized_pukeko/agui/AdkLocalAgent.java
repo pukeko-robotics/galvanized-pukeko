@@ -14,7 +14,6 @@ import com.agui.core.types.ToolCallArgsEvent;
 import com.agui.core.types.ToolCallEndEvent;
 import com.agui.core.types.ToolCallResultEvent;
 import com.agui.core.types.ToolCallStartEvent;
-import com.agui.encoder.EventEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.adk.agents.RunConfig;
 import com.google.adk.events.Event;

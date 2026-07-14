@@ -1,7 +1,9 @@
 # Pukeko + Koog AG-UI Example
 
-A greenfield **Koog (Kotlin + Ktor)** agent that speaks the AG-UI protocol by consuming
-the community **AG-UI Kotlin encoder** (`com.ag-ui.community:kotlin-encoder`). It is the
+A greenfield **Koog (Kotlin + Ktor)** agent that speaks the AG-UI protocol using the
+community **AG-UI Kotlin core types** (`com.ag-ui.community:kotlin-core`) plus a vendored
+copy of the AG-UI `EventEncoder` (`koog-agent/.../EventEncoder.kt`, BE-7 — swap for
+`com.ag-ui.community:kotlin-encoder` once BE-3's upstream PR publishes). It is the
 sibling of [`pukeko-gaunt-sloth-ag-ui`](../pukeko-gaunt-sloth-ag-ui): the same Vue web
 client, a different backend, the same wire.
 
@@ -33,8 +35,9 @@ An AG-UI server here is **not** a framework or a base class — it is a recipe:
   ```bash
   export JAVA_HOME=/usr/lib/jvm/java-21-openjdk   # confirm with: archlinux-java status
   ```
-- The AG-UI Kotlin SDK published to **mavenLocal**: `com.ag-ui.community:kotlin-core`
-  and `:kotlin-encoder` at `0.4.1` (the coordinator publishes these).
+- The AG-UI Kotlin SDK `com.ag-ui.community:kotlin-core` at `0.4.1` published to
+  **mavenLocal** (the coordinator publishes it). The `EventEncoder` is vendored in-tree
+  (BE-7), so `:kotlin-encoder` is no longer needed.
 - An LLM: `OPENAI_API_KEY` in the environment (default), or a local Ollama.
 - Node 24+ / pnpm (only for the optional web-client path).
 
