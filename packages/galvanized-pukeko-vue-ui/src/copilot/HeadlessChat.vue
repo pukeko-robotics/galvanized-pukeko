@@ -37,6 +37,8 @@ import { useAgent } from '@copilotkit/vue/v2'
 import { useCopilotKit } from '@copilotkit/vue/v2'
 import PkInput from '../components/PkInput.vue'
 import PkButton from '../components/PkButton.vue'
+import PkNewConversationButton from '../components/PkNewConversationButton.vue'
+import PkLogoLarge from '../components/PkLogoLarge.vue'
 import ToolCallBadge from '../components/ToolCallBadge.vue'
 import A2UIToolSurface from '../components/a2ui/A2UIToolSurface.vue'
 import A2UISurface from '../components/a2ui/A2UISurface.vue'
@@ -181,6 +183,28 @@ function stop() {
   }
   sending.value = false
 }
+
+/**
+ * Start a fresh conversation — the CopilotKit analogue of the bespoke
+ * `ChatInterface.newConversation()` (`chatService.stop()` → `resetThread()` →
+ * clear messages). Here there is no bespoke `chatService`: first abort any
+ * in-flight run (as {@link stop} does), then clear the CopilotKit agent thread
+ * via the idiomatic `AbstractAgent.setMessages([])` (HttpAgent inherits it) so
+ * the shared message log — the single source of `bubbles` and the fed A2UI
+ * surfaces — is emptied through the real API rather than by hand-mutating the
+ * reactive internals. Feeding-dedupe + panel state derive from `bubbles`, so
+ * clearing messages resets them too.
+ */
+function newConversation() {
+  try {
+    agent.value?.abortRun()
+  } catch {
+    // abortRun on an idle agent is a no-op.
+  }
+  sending.value = false
+  errorText.value = null
+  agent.value?.setMessages([])
+}
 </script>
 
 <template>
@@ -190,7 +214,20 @@ function stop() {
     data-testid="pk-headless-chat"
   >
     <div class="chat-column">
+      <!-- New-Conversation reset (bespoke ChatInterface parity, PLAT-20). -->
+      <div class="chat-toolbar">
+        <PkNewConversationButton data-testid="pk-headless-new-conversation" @click="newConversation" />
+      </div>
       <div class="messages" ref="messagesEl">
+        <!-- UI-only greeting empty-state: rendered only while the agent thread is
+             empty; NEVER injected into agent.messages (would pollute CK state). -->
+        <div
+          v-if="bubbles.length === 0"
+          class="message ai"
+          data-testid="pk-headless-greeting"
+        >
+          <div class="message-content">Hello! How can I help you today?</div>
+        </div>
         <template v-for="bubble in bubbles" :key="bubble.id">
           <div v-if="bubble.kind === 'user'" class="message user" data-testid="pk-headless-user">
             <div class="message-content">{{ bubble.text }}</div>
@@ -227,6 +264,7 @@ function stop() {
         <PkButton data-testid="pk-headless-send" @click="send">Send</PkButton>
         <PkButton v-if="isRunning" class="stop-button" title="Stop" @click="stop">Stop</PkButton>
       </div>
+      <div class="helper-text">Click Send or press Enter to send your message</div>
     </div>
 
     <!-- panel target: single shared, persistent/updatable surfaces beside chat. -->
@@ -238,6 +276,15 @@ function stop() {
         :surfaceId="id"
         :a2ui="panelA2ui"
       />
+      <!-- Empty-workplane placeholder (bespoke CoreApp parity): the big Pukeko
+           logo shown until the first A2UI surface arrives. -->
+      <div
+        v-if="panelA2ui.surfaces.value.size === 0"
+        class="waiting-placeholder"
+        data-testid="pk-headless-waiting-placeholder"
+      >
+        <PkLogoLarge />
+      </div>
     </div>
   </div>
 </template>
@@ -260,6 +307,13 @@ function stop() {
   min-width: 0;
   height: 100%;
 }
+.chat-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
 .pk-headless-chat.has-panel .chat-column {
   flex: 0 0 40%;
   min-width: 300px;
@@ -271,6 +325,19 @@ function stop() {
   padding: 1rem;
   background: #f9fafb;
   border-left: 1px solid #e5e7eb;
+}
+.waiting-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40%;
+  margin: 0 auto;
+  opacity: 0.2;
+  padding: 2rem 0;
+}
+.waiting-placeholder :deep(svg) {
+  height: 70vh;
+  aspect-ratio: auto;
 }
 .messages {
   flex: 1;
@@ -334,5 +401,12 @@ function stop() {
   background: linear-gradient(#d32f2f, #b71c1c);
   color: #fff;
   border: 1px solid #b71c1c;
+}
+.helper-text {
+  padding: 0 1rem 1rem 1rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-align: center;
+  background: #fff;
 }
 </style>
