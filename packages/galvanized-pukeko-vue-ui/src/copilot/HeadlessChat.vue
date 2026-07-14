@@ -190,10 +190,17 @@ function stop() {
  * clear messages). Here there is no bespoke `chatService`: first abort any
  * in-flight run (as {@link stop} does), then clear the CopilotKit agent thread
  * via the idiomatic `AbstractAgent.setMessages([])` (HttpAgent inherits it) so
- * the shared message log — the single source of `bubbles` and the fed A2UI
- * surfaces — is emptied through the real API rather than by hand-mutating the
- * reactive internals. Feeding-dedupe + panel state derive from `bubbles`, so
- * clearing messages resets them too.
+ * the shared message log — the single source of `bubbles` and the per-part
+ * `chat`-target surfaces — is emptied through the real API rather than by
+ * hand-mutating the reactive internals.
+ *
+ * The `panel`-target A2UI surface does NOT derive from `bubbles`: it lives in the
+ * shared `panelA2ui` processor, fed once per toolCallId. Clearing messages drives
+ * `a2uiSurfaceParts` to `[]`, but the feed watcher only ever ADDS surfaces (never
+ * removes), so the stale surface would persist (PLAT-21). Reset it explicitly:
+ * `panelA2ui.clearSurfaces()` empties the processor (the placeholder returns) and
+ * `fedToolCallIds.clear()` drops the dedupe memory so a later identical
+ * toolCallId re-feeds a fresh surface.
  */
 function newConversation() {
   try {
@@ -204,6 +211,9 @@ function newConversation() {
   sending.value = false
   errorText.value = null
   agent.value?.setMessages([])
+  // PLAT-21: reset the shared panel surface + its feed-dedupe (not bubble-derived).
+  panelA2ui.clearSurfaces()
+  fedToolCallIds.clear()
 }
 </script>
 

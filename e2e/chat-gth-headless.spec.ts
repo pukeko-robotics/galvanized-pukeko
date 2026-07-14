@@ -3,13 +3,17 @@ import { test, expect } from '@playwright/test';
 // Headless mode (P2b increment 3): the bespoke-styled Pukeko chat primitives
 // (PkInput / PkButton / bubbles) driven entirely by CopilotKit composables
 // (useAgent + copilotkit.runAgent) over our AG-UI backend — no CopilotKit cloud
-// runtime, no bespoke chatService. Selected at runtime via `?ui=headless`
-// (see web-client src/main.ts -> PukekoCopilot uiMode).
+// runtime, no bespoke chatService.
+//
+// Since PLAT-12 headless is the NO-QUERY DEFAULT surface, so this spec navigates
+// to `/` with no `?ui=` to prove the default resolves to headless (the `?ui=`
+// overrides are covered by chat[-gth].spec.ts for bespoke and
+// chat-gth-stock.spec.ts for stock).
 //
 // Selectors are the data-testids on HeadlessChat.vue.
-test.describe('Chat Interface (Gaunt Sloth AG-UI, headless CopilotKit mode)', () => {
+test.describe('Chat Interface (Gaunt Sloth AG-UI, headless default, no ?ui)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/?ui=headless');
+        await page.goto('/');
         await expect(
             page.locator('[data-testid="pk-headless-chat"]')
         ).toBeVisible({ timeout: 30000 });

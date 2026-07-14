@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { reactive, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import HeadlessChat from './HeadlessChat.vue'
 
@@ -104,6 +105,47 @@ describe('HeadlessChat chrome (PLAT-20)', () => {
     expect(mocks.setMessages).toHaveBeenCalledTimes(1)
     // Cleared via the idiomatic AbstractAgent.setMessages([]) — an empty log.
     expect(mocks.setMessages).toHaveBeenCalledWith([])
+  })
+
+  it('New Conversation clears BOTH the transcript and the panel surface (PLAT-21)', async () => {
+    // A reactive message log whose setMessages([]) actually empties it in place,
+    // so bubbles recompute — proves the transcript clears AND lets the panel
+    // reset be a true regression check (without clearSurfaces() the stale panel
+    // surface would persist even after messages empty).
+    const messages = reactive(a2uiMessages())
+    mocks.setMessages.mockImplementation(() => {
+      messages.splice(0)
+    })
+    mocks.agentRef.value = {
+      messages,
+      addMessage: mocks.addMessage,
+      abortRun: mocks.abortRun,
+      setMessages: mocks.setMessages,
+      isRunning: false,
+    }
+
+    const wrapper = mount(HeadlessChat, { props: { agentId: 'default', a2uiTarget: 'panel' } })
+
+    // Precondition: the panel shows the surface and the transcript has a bubble.
+    const panel = wrapper.find('[data-testid="pk-headless-a2ui-panel"]')
+    expect(panel.find('.a2ui-surface').exists()).toBe(true)
+    expect(panel.text()).toContain('Pick an option')
+    expect(wrapper.find('[data-testid="pk-headless-waiting-placeholder"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="pk-headless-assistant"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="pk-headless-greeting"]').exists()).toBe(false)
+
+    await wrapper.find('[data-testid="pk-headless-new-conversation"]').trigger('click')
+    await nextTick()
+
+    // Transcript emptied: no assistant/user bubbles, the greeting empty-state returns.
+    expect(wrapper.find('[data-testid="pk-headless-assistant"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="pk-headless-user"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="pk-headless-greeting"]').exists()).toBe(true)
+
+    // Panel reset: the A2UI surface is gone and the PkLogoLarge placeholder returns.
+    expect(panel.find('.a2ui-surface').exists()).toBe(false)
+    expect(panel.text()).not.toContain('Pick an option')
+    expect(wrapper.find('[data-testid="pk-headless-waiting-placeholder"]').exists()).toBe(true)
   })
 
   it('renders the send hint under the input area', () => {

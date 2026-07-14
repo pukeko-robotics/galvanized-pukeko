@@ -2,7 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Chat Interface', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/');
+        // Bespoke surface is opt-in via ?ui=bespoke now that the no-query
+        // default is headless (PLAT-12). It renders `.chat-interface`.
+        await page.goto('/?ui=bespoke');
         // Wait for initial load
         await expect(page.locator('.chat-interface')).toBeVisible();
     });
