@@ -24,6 +24,6 @@ export {
   A2UIRenderToolBridge,
   A2UIToolSurface,
 }
-export type { UiMode } from './copilot/types'
+export type { UiMode, A2UITarget } from './copilot/types'
 export { toBubbles } from './copilot/useHeadlessChat'
 export type { ChatBubble, AgentMessageLike } from './copilot/useHeadlessChat'

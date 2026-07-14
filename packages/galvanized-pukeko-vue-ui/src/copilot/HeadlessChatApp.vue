@@ -9,8 +9,12 @@ import { shallowRef } from 'vue'
 import { CopilotKitProvider, HttpAgent } from '@copilotkit/vue/v2'
 import { configService } from '../services/configService'
 import HeadlessChat from './HeadlessChat.vue'
+import type { A2UITarget } from './types'
 
-const props = withDefaults(defineProps<{ agUiUrl?: string }>(), { agUiUrl: '' })
+const props = withDefaults(
+  defineProps<{ agUiUrl?: string; a2uiTarget?: A2UITarget }>(),
+  { agUiUrl: '', a2uiTarget: 'panel' },
+)
 
 const url = props.agUiUrl || configService.get().agUiUrl
 const agent = shallowRef(new HttpAgent({ url }))
@@ -20,7 +24,7 @@ const selfManagedAgents = { default: agent.value }
 <template>
   <CopilotKitProvider :self-managed-agents="selfManagedAgents">
     <div class="pk-headless-app">
-      <HeadlessChat agent-id="default" />
+      <HeadlessChat agent-id="default" :a2ui-target="props.a2uiTarget" />
     </div>
   </CopilotKitProvider>
 </template>

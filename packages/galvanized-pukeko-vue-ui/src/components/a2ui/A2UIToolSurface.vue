@@ -18,7 +18,7 @@
  * chatService thread; the host decides how to deliver it.
  */
 import { ref, watch } from 'vue'
-import { useA2UI, type UserAction } from '../../composables/useA2UI'
+import { useA2UI, buildUserAction, type UserAction } from '../../composables/useA2UI'
 import A2UISurface from './A2UISurface.vue'
 
 const props = defineProps<{
@@ -90,51 +90,16 @@ watch(() => props.surfaceJsonl, render, { immediate: true })
 // A2UISurface reads `a2ui.sendAction` live at click time, so overriding the
 // property here takes effect for surfaces already provided below.
 a2ui.sendAction = (surfaceId, action, sourceComponentId, node) => {
-  const userAction: UserAction = {
-    actionName: action.name,
+  const userAction: UserAction = buildUserAction(
+    a2ui.processor,
+    surfaceId,
+    action,
     sourceComponentId,
-    timestamp: new Date().toISOString(),
-    context: collectContext(surfaceId, action, node),
-  }
+    node,
+  )
   a2ui.clearSurfaces()
   a2ui.pendingToolCallId.value = null
   emit('action', { toolCallId: props.toolCallId, action: userAction })
-}
-
-// Mirror useA2UI.sendAction's context resolution (literals + path lookups, with
-// a TextField-value fallback) without its chatService coupling.
-function collectContext(
-  surfaceId: string,
-  action: { context?: Array<{ key: string; value: { path?: string; literalString?: string; literalNumber?: number; literalBoolean?: boolean } }> },
-  node?: Parameters<typeof a2ui.sendAction>[3],
-): Record<string, unknown> | undefined {
-  const resolved: Record<string, unknown> = {}
-  if (action.context) {
-    for (const entry of action.context) {
-      if (entry.value.path && node) {
-        resolved[entry.key] = a2ui.processor.getData(node, entry.value.path, surfaceId)
-      } else if (entry.value.literalString !== undefined) {
-        resolved[entry.key] = entry.value.literalString
-      } else if (entry.value.literalNumber !== undefined) {
-        resolved[entry.key] = entry.value.literalNumber
-      } else if (entry.value.literalBoolean !== undefined) {
-        resolved[entry.key] = entry.value.literalBoolean
-      }
-    }
-  }
-  if (Object.keys(resolved).length === 0) {
-    const surface = a2ui.processor.getSurfaces().get(surfaceId)
-    if (surface) {
-      for (const [compId, rawComp] of surface.components) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((rawComp as any)?.component?.TextField !== undefined) {
-          const value = surface.dataModel.get(compId)
-          if (value != null && value !== '') resolved[compId] = value
-        }
-      }
-    }
-  }
-  return Object.keys(resolved).length > 0 ? resolved : undefined
 }
 </script>
 

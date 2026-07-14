@@ -456,3 +456,58 @@ export function useA2UI() {
     processor,
   }
 }
+
+/** The processor instance returned by {@link useA2UI} (class is module-private). */
+export type A2UIProcessor = ReturnType<typeof useA2UI>['processor']
+
+/**
+ * Resolve an A2UI action into the serializable {@link UserAction} the backend
+ * expects, mirroring `useA2UI.sendAction`'s context resolution (explicit
+ * literals + path lookups, with a TextField-value fallback) but WITHOUT the
+ * bespoke `chatService` coupling.
+ *
+ * Shared by every UI mode's action path so the payload posted back to the agent
+ * is identical regardless of surface (bespoke chatService, CopilotKit chat via
+ * {@link A2UIToolSurface}, or the headless panel). This is the single source of
+ * truth for that resolution — do not re-derive it inline.
+ */
+export function buildUserAction(
+  processor: A2UIProcessor,
+  surfaceId: string,
+  action: Action,
+  sourceComponentId: string,
+  node?: AnyComponentNode,
+): UserAction {
+  const resolved: Record<string, unknown> = {}
+  if (action.context) {
+    for (const entry of action.context) {
+      if (entry.value.path && node) {
+        resolved[entry.key] = processor.getData(node, entry.value.path, surfaceId)
+      } else if (entry.value.literalString !== undefined) {
+        resolved[entry.key] = entry.value.literalString
+      } else if (entry.value.literalNumber !== undefined) {
+        resolved[entry.key] = entry.value.literalNumber
+      } else if (entry.value.literalBoolean !== undefined) {
+        resolved[entry.key] = entry.value.literalBoolean
+      }
+    }
+  }
+  // Fallback: collect all TextField values from the surface when no explicit context.
+  if (Object.keys(resolved).length === 0) {
+    const surface = processor.getSurfaces().get(surfaceId)
+    if (surface) {
+      for (const [compId, rawComp] of surface.components) {
+        if (rawComp?.component?.TextField !== undefined) {
+          const value = surface.dataModel.get(compId)
+          if (value != null && value !== '') resolved[compId] = value
+        }
+      }
+    }
+  }
+  return {
+    actionName: action.name,
+    sourceComponentId,
+    timestamp: new Date().toISOString(),
+    context: Object.keys(resolved).length > 0 ? resolved : undefined,
+  }
+}

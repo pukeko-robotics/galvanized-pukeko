@@ -7,14 +7,20 @@
  * The provider/agent wiring (self-managed AG-UI HttpAgent, no CopilotKit cloud
  * runtime) is inside the library components. See briefs/copilotkit-vue/PLAN.md.
  */
-import { PukekoCopilot, type UiMode } from '@galvanized-pukeko/vue-ui/copilot'
+import { PukekoCopilot, type UiMode, type A2UITarget } from '@galvanized-pukeko/vue-ui/copilot'
 
-withDefaults(defineProps<{ uiMode?: UiMode }>(), { uiMode: 'stock' })
+// PLAT-19: the headless A2UI render target. Defaults to the split `panel`
+// (bespoke parity); `?ui=headless` itself stays opt-in (mode selection lives in
+// main.ts — flipping the app default is the separate gated PLAT-12).
+withDefaults(defineProps<{ uiMode?: UiMode; a2uiTarget?: A2UITarget }>(), {
+  uiMode: 'stock',
+  a2uiTarget: 'panel',
+})
 </script>
 
 <template>
   <div class="copilot-app">
-    <PukekoCopilot :ui-mode="uiMode" />
+    <PukekoCopilot :ui-mode="uiMode" :a2ui-target="a2uiTarget" />
   </div>
 </template>
 

@@ -19,7 +19,7 @@
 import StockChatApp from './StockChatApp.vue'
 import HeadlessChatApp from './HeadlessChatApp.vue'
 import CoreApp from '../CoreApp.vue'
-import type { UiMode } from './types'
+import type { UiMode, A2UITarget } from './types'
 
 withDefaults(
   defineProps<{
@@ -27,13 +27,22 @@ withDefaults(
     uiMode?: UiMode
     /** AG-UI endpoint for the CopilotKit modes; defaults to configService's. */
     agUiUrl?: string
+    /**
+     * Where the headless UI renders A2UI surfaces (PLAT-19). Defaults to the
+     * split `panel` (bespoke parity); only meaningful when `uiMode === 'headless'`.
+     */
+    a2uiTarget?: A2UITarget
   }>(),
-  { uiMode: 'bespoke', agUiUrl: '' },
+  { uiMode: 'bespoke', agUiUrl: '', a2uiTarget: 'panel' },
 )
 </script>
 
 <template>
   <StockChatApp v-if="uiMode === 'stock'" :ag-ui-url="agUiUrl" />
-  <HeadlessChatApp v-else-if="uiMode === 'headless'" :ag-ui-url="agUiUrl" />
+  <HeadlessChatApp
+    v-else-if="uiMode === 'headless'"
+    :ag-ui-url="agUiUrl"
+    :a2ui-target="a2uiTarget"
+  />
   <CoreApp v-else />
 </template>
