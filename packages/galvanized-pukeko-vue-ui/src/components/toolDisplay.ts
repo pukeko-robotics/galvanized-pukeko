@@ -77,6 +77,13 @@ function registry(): Map<string, ToolDisplayEntry> {
  * Register a display entry for a tool name. Re-registering the same name
  * replaces the prior entry. Returns an unregister function.
  *
+ * **Timing:** register at init time (module load / app setup), before chat
+ * badges mount. `ToolCallBadge` consults the registry inside a `computed` keyed
+ * on the tool name, so a registration that arrives *after* a badge has already
+ * rendered will not update that already-mounted badge until its part changes.
+ * This is deliberate (consumers register once at startup, à la RC-14) — it is
+ * not a reactive store.
+ *
  * @example
  * ```ts
  * import { registerToolDisplay } from '@galvanized-pukeko/vue-ui'

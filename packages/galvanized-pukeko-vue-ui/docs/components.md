@@ -79,6 +79,11 @@ const unregister = registerToolDisplay('capture_image', {
   process-wide instance shared by both the library root and the `/copilot` entry, so registration
   from either import path is seen by every chat surface.
 
+- **Timing** — register at init time (module load / app setup), **before** chat badges mount. The
+  registry is consulted in a `computed` keyed on the tool name, so a registration that arrives after
+  a badge has already rendered will not update that already-mounted badge until its part changes.
+  (It is a startup-time registry, not a reactive store — which is all RC-14 and other consumers need.)
+
 This is the extension point used by the robot controller to render `capture_image` as an inline
 thumbnail and motion tools as before/after images (RC-14).
 
