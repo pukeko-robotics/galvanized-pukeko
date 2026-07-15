@@ -77,8 +77,8 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
   vertical-align: middle;
   max-width: 100%;
   border-radius: 0.5rem;
-  border: 1px solid #bfdbfe;
-  background-color: #eff6ff;
+  border: 1px solid var(--pk-color-info-border, #bfdbfe);
+  background-color: var(--pk-color-info-surface, #eff6ff);
   overflow: hidden;
   font-size: 0.85rem;
   margin: 0.15rem 0.25rem;
@@ -97,7 +97,7 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
   background: none;
   border: none;
   cursor: pointer;
-  color: #1e40af;
+  color: var(--pk-color-info-text, #1e40af);
   font-size: 0.85rem;
   font-weight: 500;
   text-align: left;
@@ -107,14 +107,14 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
 }
 
 .tool-call-header:hover {
-  background-color: #dbeafe;
+  background-color: var(--pk-color-info-surface-hover, #dbeafe);
 }
 
 .tool-call-arrow {
   display: inline-block;
   font-size: 0.7rem;
   transition: transform 0.15s ease;
-  color: #3b82f6;
+  color: var(--pk-color-primary, #3b82f6);
   flex-shrink: 0;
 }
 
@@ -128,11 +128,11 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
 }
 
 .tool-call-label {
-  color: #1e40af;
+  color: var(--pk-color-info-text, #1e40af);
 }
 
 .tool-call-summary {
-  color: #3b82f6;
+  color: var(--pk-color-primary, #3b82f6);
   font-weight: 400;
   font-size: 0.78rem;
   overflow: hidden;
@@ -146,7 +146,7 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 50%;
-  background-color: #3b82f6;
+  background-color: var(--pk-color-primary, #3b82f6);
   margin-left: 0.15rem;
   animation: tool-call-pulse 0.9s ease-in-out infinite;
 }
@@ -157,14 +157,14 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
 }
 
 .tool-call-body {
-  border-top: 1px solid #bfdbfe;
+  border-top: 1px solid var(--pk-color-info-border, #bfdbfe);
   padding: 0.5rem 0.75rem;
 }
 
 .tool-call-section-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #1e40af;
+  color: var(--pk-color-info-text, #1e40af);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 0.25rem;
@@ -179,13 +179,13 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
   font-size: 0.75rem;
   line-height: 1.4;
-  color: #334155;
+  color: var(--pk-color-code-text, #334155);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 300px;
   overflow-y: auto;
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background-color: var(--pk-color-code-surface, #f8fafc);
+  border: 1px solid var(--pk-color-code-border, #cbd5e1);
   border-radius: 0.375rem;
   padding: 0.5rem;
 }

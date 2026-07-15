@@ -78,13 +78,13 @@ const shown = computed(() => (expanded.value || !overflows.value ? formatted.val
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
   font-size: 0.75rem;
   line-height: 1.4;
-  color: #334155;
+  color: var(--pk-color-code-text, #334155);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 300px;
   overflow-y: auto;
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background-color: var(--pk-color-code-surface, #f8fafc);
+  border: 1px solid var(--pk-color-code-border, #cbd5e1);
   border-radius: 0.375rem;
   padding: 0.5rem;
 }
@@ -97,7 +97,7 @@ const shown = computed(() => (expanded.value || !overflows.value ? formatted.val
 
 .tool-result-marker {
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--pk-color-text-secondary, #64748b);
   font-style: italic;
 }
 
@@ -109,11 +109,11 @@ const shown = computed(() => (expanded.value || !overflows.value ? formatted.val
   font: inherit;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--pk-color-link, #2563eb);
   text-decoration: underline;
 }
 
 .tool-result-toggle:hover {
-  color: #1e40af;
+  color: var(--pk-color-info-text, #1e40af);
 }
 </style>

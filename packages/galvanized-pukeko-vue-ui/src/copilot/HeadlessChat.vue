@@ -321,8 +321,8 @@ function newConversation() {
   display: flex;
   justify-content: flex-end;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fff;
+  border-bottom: 1px solid var(--pk-color-border, #e5e7eb);
+  background: var(--pk-color-surface, #fff);
 }
 .pk-headless-chat.has-panel .chat-column {
   flex: 0 0 40%;
@@ -333,8 +333,8 @@ function newConversation() {
   height: 100%;
   overflow-y: auto;
   padding: 1rem;
-  background: #f9fafb;
-  border-left: 1px solid #e5e7eb;
+  background: var(--pk-color-surface-sunken, #f9fafb);
+  border-left: 1px solid var(--pk-color-border, #e5e7eb);
 }
 .waiting-placeholder {
   display: flex;
@@ -375,14 +375,14 @@ function newConversation() {
   word-wrap: break-word;
 }
 .message.user .message-content {
-  background-color: #3b82f6;
-  color: #fff;
+  background-color: var(--pk-color-primary, #3b82f6);
+  color: var(--pk-color-on-primary, #fff);
   border-bottom-right-radius: 0.25rem;
   white-space: pre-wrap;
 }
 .message.ai .message-content {
-  background-color: #f3f4f6;
-  color: #1f2937;
+  background-color: var(--pk-color-surface-muted, #f3f4f6);
+  color: var(--pk-color-text, #1f2937);
   border-bottom-left-radius: 0.25rem;
 }
 .text-part {
@@ -390,33 +390,33 @@ function newConversation() {
 }
 .thinking-part {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--pk-color-text-dim, #9ca3af);
   white-space: pre-wrap;
   font-style: italic;
 }
 .error-banner {
   padding: 0.5rem 1rem;
-  color: #991b1b;
-  background: #fee2e2;
+  color: var(--pk-color-danger-text, #991b1b);
+  background: var(--pk-color-danger-surface, #fee2e2);
   font-size: 0.85rem;
 }
 .input-area {
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--pk-color-border, #e5e7eb);
   display: flex;
   gap: 0.5rem;
-  background: #fff;
+  background: var(--pk-color-surface, #fff);
 }
 .input-area .stop-button {
-  background: linear-gradient(#d32f2f, #b71c1c);
-  color: #fff;
-  border: 1px solid #b71c1c;
+  background: linear-gradient(var(--pk-color-danger, #d32f2f), var(--pk-color-danger-strong, #b71c1c));
+  color: var(--pk-color-on-primary, #fff);
+  border: 1px solid var(--pk-color-danger-strong, #b71c1c);
 }
 .helper-text {
   padding: 0 1rem 1rem 1rem;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--pk-color-text-dim, #9ca3af);
   text-align: center;
-  background: #fff;
+  background: var(--pk-color-surface, #fff);
 }
 </style>
