@@ -83,6 +83,43 @@
   --box-shadow-drop-active: 0px 1px 2px 1px var(--grey-70);
 
   --table-stripe-bg-idle: var(--grey-93);
+
+  /* ── Semantic theme tokens (PLAT-23) ──────────────────────────────────────
+     Role-named colour tokens a consumer can override to re-skin the shared
+     chat/UI surfaces without forking components. Default values reproduce
+     today's appearance (a refactor-to-tokens, not a restyle) and honour the
+     DL-8 cross-surface colour roles. Keep these in lock-step with
+     `defaultTheme` in `src/theme.ts` (asserted by theme.spec.ts). Override via
+     `applyTheme(...)` or by setting these variables at your own `:root`. */
+  --pk-color-surface: #fff;
+  --pk-color-surface-muted: #f3f4f6;
+  --pk-color-surface-sunken: #f9fafb;
+  --pk-color-border: #e5e7eb;
+
+  --pk-color-text: #1f2937;
+  --pk-color-text-muted: #6b7280;
+  --pk-color-text-secondary: #64748b;
+  --pk-color-text-dim: #9ca3af;
+
+  --pk-color-primary: #3b82f6;
+  --pk-color-on-primary: #fff;
+  --pk-color-link: #2563eb;
+
+  --pk-color-danger: #d32f2f;
+  --pk-color-danger-strong: #b71c1c;
+  --pk-color-danger-hover: #e53935;
+  --pk-color-danger-hover-strong: #c62828;
+  --pk-color-danger-text: #991b1b;
+  --pk-color-danger-surface: #fee2e2;
+
+  --pk-color-info-surface: #eff6ff;
+  --pk-color-info-surface-hover: #dbeafe;
+  --pk-color-info-border: #bfdbfe;
+  --pk-color-info-text: #1e40af;
+
+  --pk-color-code-text: #334155;
+  --pk-color-code-surface: #f8fafc;
+  --pk-color-code-border: #cbd5e1;
 }
 
 /* nice accessible fonts */

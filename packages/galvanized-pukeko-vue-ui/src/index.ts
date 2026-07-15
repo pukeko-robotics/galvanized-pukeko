@@ -79,3 +79,10 @@ import A2UIRenderer from './components/a2ui/A2UIRenderer.vue'
 export { A2UISurface, A2UIRenderer }
 export { useA2UI, A2UIContextKey, parseA2UIJsonl } from './composables/useA2UI'
 export type { Surface, AnyComponentNode, A2UIContext, UserAction } from './composables/useA2UI'
+
+// Theming (PLAT-23): role-named CSS-custom-property tokens + an override API a
+// consumer calls to re-skin the shared surfaces without forking components. The
+// tokens are DOM/`:root`-side (they cascade), so `applyTheme` re-themes both
+// bundles; re-exported from `./copilot` too. See docs `theming.md`.
+export { applyTheme, resetTheme, defaultTheme, PK_COLOR_TOKENS } from './theme'
+export type { PkTheme, PkColorToken } from './theme'

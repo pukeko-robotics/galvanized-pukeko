@@ -42,3 +42,10 @@ export {
   toolDisplayLabel,
 } from './components/toolDisplay'
 export type { ToolDisplayEntry, ToolResultRendererProps } from './components/toolDisplay'
+
+// Theming (PLAT-23). Re-exported here as well as from the library root so a
+// consumer importing the headless surface from this sub-path can re-skin it via
+// the same `applyTheme` (the tokens are DOM/`:root`-side, so both bundles read
+// the same variables). See `theme.ts` and docs `theming.md`.
+export { applyTheme, resetTheme, defaultTheme, PK_COLOR_TOKENS } from './theme'
+export type { PkTheme, PkColorToken } from './theme'

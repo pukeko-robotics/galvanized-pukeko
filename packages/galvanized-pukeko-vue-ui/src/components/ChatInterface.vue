@@ -369,7 +369,7 @@ defineExpose({
   justify-content: flex-end;
   padding: 0.5rem 1rem;
   border-bottom: var(--line-separator-subtle);
-  background: #fff;
+  background: var(--pk-color-surface, #fff);
 }
 
 .messages {
@@ -400,8 +400,8 @@ defineExpose({
 }
 
 .message.notice .message-content {
-  background-color: #f3f4f6;
-  color: #6b7280;
+  background-color: var(--pk-color-surface-muted, #f3f4f6);
+  color: var(--pk-color-text-muted, #6b7280);
   font-size: 0.8rem;
   font-style: italic;
   text-align: center;
@@ -418,15 +418,15 @@ defineExpose({
 }
 
 .message.user .message-content {
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--pk-color-primary, #3b82f6);
+  color: var(--pk-color-on-primary, #fff);
   border-bottom-right-radius: 0.25rem;
   white-space: pre-wrap;
 }
 
 .message.ai .message-content {
-  background-color: #f3f4f6;
-  color: #1f2937;
+  background-color: var(--pk-color-surface-muted, #f3f4f6);
+  color: var(--pk-color-text, #1f2937);
   border-bottom-left-radius: 0.25rem;
 }
 
@@ -436,10 +436,10 @@ defineExpose({
 
 .thinking-part {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--pk-color-text-dim, #9ca3af);
   white-space: pre-wrap;
   font-style: italic;
-  border-left: 2px solid #e5e7eb;
+  border-left: 2px solid var(--pk-color-border, #e5e7eb);
   padding: 0.25rem 0 0.25rem 0.6rem;
   margin: 0.4rem 0;
   line-height: 1.35;
@@ -449,7 +449,7 @@ defineExpose({
   content: "▍";
   display: inline-block;
   margin-left: 1px;
-  color: #9ca3af;
+  color: var(--pk-color-text-dim, #9ca3af);
   animation: blink 0.7s infinite;
 }
 
@@ -457,7 +457,7 @@ defineExpose({
   display: inline-block;
   width: 0.5em;
   height: 1em;
-  background-color: #6b7280;
+  background-color: var(--pk-color-text-muted, #6b7280);
   margin-left: 2px;
   animation: blink 0.7s infinite;
   vertical-align: text-bottom;
@@ -470,10 +470,10 @@ defineExpose({
 
 .input-area {
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--pk-color-border, #e5e7eb);
   display: flex;
   gap: 0.5rem;
-  background: #fff;
+  background: var(--pk-color-surface, #fff);
 }
 
 /* Small square interrupt button: just the rect glyph, shown only while running.
@@ -486,22 +486,22 @@ defineExpose({
   justify-content: center;
   width: calc(calc(var(--nice-spacing-unit) + var(--padding-twothird)) + 2px);
   padding: 0;
-  background: linear-gradient(#d32f2f, #b71c1c);
-  color: #fff;
-  border: 1px solid #b71c1c;
+  background: linear-gradient(var(--pk-color-danger, #d32f2f), var(--pk-color-danger-strong, #b71c1c));
+  color: var(--pk-color-on-primary, #fff);
+  border: 1px solid var(--pk-color-danger-strong, #b71c1c);
   border-radius: var(--border-radius-small-box);
 }
 
 .input-area .stop-button:hover {
-  background: linear-gradient(#e53935, #c62828);
+  background: linear-gradient(var(--pk-color-danger-hover, #e53935), var(--pk-color-danger-hover-strong, #c62828));
   padding: 0;
 }
 
 .helper-text {
   padding: 0 1rem 1rem 1rem;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--pk-color-text-dim, #9ca3af);
   text-align: center;
-  background: #fff;
+  background: var(--pk-color-surface, #fff);
 }
 </style>

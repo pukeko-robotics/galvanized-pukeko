@@ -28,6 +28,7 @@ createApp(CoreApp).mount('#app')
 - [Getting started](https://github.com/pukeko-robotics/galvanized-pukeko/blob/main/packages/galvanized-pukeko-vue-ui/docs/getting-started.md)
 - [Configuration](https://github.com/pukeko-robotics/galvanized-pukeko/blob/main/packages/galvanized-pukeko-vue-ui/docs/configuration.md)
 - [Components & API reference](https://github.com/pukeko-robotics/galvanized-pukeko/blob/main/packages/galvanized-pukeko-vue-ui/docs/components.md)
+- [Theming](https://github.com/pukeko-robotics/galvanized-pukeko/blob/main/packages/galvanized-pukeko-vue-ui/docs/theming.md)
 
 ## Reference implementations
 
