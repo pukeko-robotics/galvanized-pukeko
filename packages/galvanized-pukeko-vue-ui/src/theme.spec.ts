@@ -83,6 +83,16 @@ describe('theme: override applies', () => {
     expect(document.documentElement.style.getPropertyValue('--pk-color-primary')).toBe('')
   })
 
+  it('undo restores a previously-set value (stacked override), not just clears it', () => {
+    const el = document.createElement('div')
+    el.style.setProperty('--pk-color-primary', '#111') // a pre-existing override
+    const undo = applyTheme({ '--pk-color-primary': '#059669' }, el)
+    expect(el.style.getPropertyValue('--pk-color-primary')).toBe('#059669')
+    undo()
+    // the restore-prior branch: reverts to #111, does NOT remove the property
+    expect(el.style.getPropertyValue('--pk-color-primary')).toBe('#111')
+  })
+
   it('resetTheme removes every pk override, reverting to the stylesheet defaults', () => {
     const el = document.createElement('div')
     applyTheme({ '--pk-color-primary': '#059669', '--pk-color-danger': '#7c3aed' }, el)
@@ -110,11 +120,17 @@ describe('theme: migrated components reference tokens (override wins over defaul
 
 describe('theme: default unchanged (no visual regression)', () => {
   it('every token reference falls back to exactly its DL-8 default colour', () => {
-    // The strongest no-regression proof: whether a token resolves via global.css
-    // (default theme) or via the CSS fallback (e.g. the /copilot bundle, which
-    // does not ship global.css), the DEFAULT colour is identical to what shipped
-    // before PLAT-23. So every `var(--pk-color-X, <fallback>)` must have
-    // <fallback> === defaultTheme['--pk-color-X'].
+    // Internal lock-step check: whether a token resolves via global.css (default
+    // theme) or via the CSS fallback (e.g. the /copilot bundle, which does not
+    // ship global.css), both paths yield the SAME default colour. So every
+    // `var(--pk-color-X, <fallback>)` must have <fallback> === the
+    // defaultTheme['--pk-color-X'] value (which the contract test also asserts
+    // equals the global.css :root value). NOTE: this proves fallback == default
+    // == :root are consistent; it does NOT machine-prove equality to the
+    // pre-PLAT-23 historical colours (only the 5 tokens spot-checked in the
+    // contract test have a literal historical anchor here). Equality to the old
+    // appearance rests on the reviewed migration diff and the post-merge
+    // live-browser visual pass.
     let checked = 0
     for (const [f, source] of Object.entries(MIGRATED)) {
       for (const { token, fallback } of tokenRefs(source)) {

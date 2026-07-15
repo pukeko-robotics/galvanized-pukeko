@@ -11,7 +11,7 @@ The default theme reproduces the library's out-of-the-box appearance exactly; th
 ## The token contract
 
 Override any of these `--pk-color-*` variables to re-theme. The names are **semantic roles** (honouring
-the cross-surface [DL-8 colour semantics](../../../docs/design-language.md)); the default values are the
+the cross-surface DL-8 colour semantics); the default values are the
 colours the library ships.
 
 | Token | Default | Role (DL-8) |
