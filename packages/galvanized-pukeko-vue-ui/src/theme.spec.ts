@@ -6,26 +6,60 @@ import {
   resetTheme,
   defaultTheme,
   PK_COLOR_TOKENS,
-  type PkTheme,
   type PkColorToken,
 } from './theme'
-// SFC source via Vite's `?raw`; global.css via fs (Vitest returns "" for
-// `.css?raw`, and its cwd is the package root). The scoped <style> of a .vue
-// file is NOT injected into jsdom, and jsdom never resolves `var()` in computed
-// style, so the component-level assertions inspect the SFC source directly (the
-// live-browser visual pass is the post-merge follow-up per the brief).
-import chatInterfaceSrc from './components/ChatInterface.vue?raw'
-import headlessChatSrc from './copilot/HeadlessChat.vue?raw'
-import toolCallBadgeSrc from './components/ToolCallBadge.vue?raw'
-import toolResultGenericSrc from './components/ToolResultGeneric.vue?raw'
+import { emeraldExample } from './theme.fixtures'
+// SFC source via Vite's `import.meta.glob` (`?raw` query, eager); global.css via
+// fs (Vitest returns "" for `.css?raw`, and its cwd is the package root). The
+// scoped <style> of a .vue file is NOT injected into jsdom, and jsdom never
+// resolves `var()` in computed style, so the component-level assertions inspect
+// the SFC source directly (the live-browser visual pass is the post-merge
+// follow-up per the brief).
 const globalCss = readFileSync('src/assets/global.css', 'utf8')
 
-const MIGRATED: Record<string, string> = {
-  'ChatInterface.vue': chatInterfaceSrc,
-  'HeadlessChat.vue': headlessChatSrc,
-  'ToolCallBadge.vue': toolCallBadgeSrc,
-  'ToolResultGeneric.vue': toolResultGenericSrc,
+// Discover MIGRATED by globbing the package's component source dirs, rather
+// than a hardcoded allowlist, so a future component that starts referencing
+// `--pk-color-*` is picked up automatically (and a wrong `var(--pk-color-X,
+// #wronghex)` fallback in it can't pass CI silently just because nobody
+// remembered to add it to a list here). Vite 8's `import.meta.glob` API dropped
+// the older (<=4) `{ as: 'raw' }` shorthand in favour of `{ query, import }`;
+// `query: '?raw', import: 'default'` is the Vite 8 equivalent (see
+// `node_modules/vite/types/importGlob.d.ts`: `as` is `@deprecated`, superseded
+// by `query`/`import`). `eager: true` plus the explicit `<string>` generic
+// (overload 3 of `ImportGlobFunction`) resolves synchronously to
+// `Record<string, string>` — the same shape the old static `?raw` imports gave
+// us — so nothing downstream in this file needs to change.
+//
+// Scoped to `./components/**/*.vue` and `./copilot/**/*.vue` (matching where
+// the four currently-migrated SFCs live: `components/ChatInterface.vue`,
+// `copilot/HeadlessChat.vue`, `components/ToolCallBadge.vue`,
+// `components/ToolResultGeneric.vue`) rather than all of `src/**/*.vue`, so the
+// glob can't accidentally sweep in test fixtures or unrelated components
+// outside the theming surface.
+const globbedVueSources: Record<string, string> = {
+  ...import.meta.glob<string>('./components/**/*.vue', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }),
+  ...import.meta.glob<string>('./copilot/**/*.vue', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }),
 }
+
+/** True if the SFC's `<style>` block references at least one `--pk-color-*` token. */
+function hasTokenizedStyle(source: string): boolean {
+  const style = source.split('<style')[1] ?? ''
+  return style.includes('--pk-color-')
+}
+
+const MIGRATED: Record<string, string> = Object.fromEntries(
+  Object.entries(globbedVueSources)
+    .filter(([, source]) => hasTokenizedStyle(source))
+    .map(([path, source]) => [path.split('/').pop()!, source]),
+)
 
 /** Every `var(--pk-color-X, <fallback>)` reference found in a source string. */
 function tokenRefs(source: string): { token: string; fallback: string }[] {
@@ -64,6 +98,30 @@ describe('theme: token contract present with DL-8 defaults', () => {
       expect(m, `global.css should define ${token}`).toBeTruthy()
       expect(m![1].trim(), `global.css ${token} must match defaultTheme`).toBe(defaultTheme[token])
     }
+  })
+
+  it('global.css defines no --pk-color-* custom property absent from PK_COLOR_TOKENS (reverse parity)', () => {
+    // The forward direction (above) proves every JS token has a CSS definition.
+    // This is the other direction: a stray `--pk-color-*` declared in CSS but
+    // never exported from PK_COLOR_TOKENS would be invisible to consumers
+    // calling applyTheme() — they'd have no typed way to override it.
+    const re = /(--pk-color-[a-z-]+):\s*[^;]+;/g
+    const declaredInCss = new Set<string>()
+    for (const m of globalCss.matchAll(re)) declaredInCss.add(m[1])
+    expect(declaredInCss.size).toBeGreaterThan(0) // sanity: the regex actually matched something
+    for (const token of declaredInCss) {
+      expect(PK_COLOR_TOKENS, `global.css defines ${token} but it is not in PK_COLOR_TOKENS`).toContain(
+        token as PkColorToken,
+      )
+    }
+  })
+})
+
+describe('theme: MIGRATED discovery (glob-based, not a hardcoded allowlist)', () => {
+  it('finds the four currently-tokenized SFCs by scanning for --pk-color- in <style>, not a fixed list', () => {
+    expect(Object.keys(MIGRATED).sort()).toEqual(
+      ['ChatInterface.vue', 'HeadlessChat.vue', 'ToolCallBadge.vue', 'ToolResultGeneric.vue'].sort(),
+    )
   })
 })
 
@@ -160,17 +218,9 @@ describe('theme: default unchanged (no visual regression)', () => {
 })
 
 describe('theme: worked example (end-to-end consumer override)', () => {
-  // A minimal example theme (NOT the robot palette) that recolours the user bubble
-  // and tool badge to emerald, which also demonstrates honouring DL-8's
-  // green-for-user semantics via the token seam. Documented in docs/theming.md.
-  const emeraldExample: PkTheme = {
-    '--pk-color-primary': '#059669',
-    '--pk-color-link': '#047857',
-    '--pk-color-info-text': '#065f46',
-    '--pk-color-info-surface': '#ecfdf5',
-    '--pk-color-info-border': '#a7f3d0',
-  }
-
+  // emeraldExample lives in ./theme.fixtures so this exact object is also what
+  // e2e/theme.visual.spec.ts applies in a real browser (see that file for the
+  // mounted-render, actual-computed-colour proof jsdom can't provide here).
   it('applying the example theme overrides the resolved tokens, and undo restores', () => {
     const root = document.documentElement
     // default: no override present, so resolution would use the stylesheet/fallback

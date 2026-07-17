@@ -56,6 +56,7 @@
     "dev": "vite build --watch",
     "build": "vite build && vite build --config vite.copilot.config.ts",
     "test": "vitest run",
+    "test:visual": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -73,6 +74,7 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/language-core": "~3.1.5",
     "typescript": "^5.9.3",
