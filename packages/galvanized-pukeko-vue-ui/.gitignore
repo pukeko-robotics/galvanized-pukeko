@@ -1,0 +1,5 @@
+# Playwright output (e2e/theme.visual.spec.ts, `pnpm test:visual`). The repo-root
+# .gitignore's `/test-results/` and `/playwright-report/` are anchored to the repo
+# root, so they don't reach this nested package — mirror them here.
+/test-results/
+/playwright-report/
