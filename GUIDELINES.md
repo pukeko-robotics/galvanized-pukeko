@@ -110,3 +110,44 @@ Please follow this workflow:
 
 ---
 
+## Documentation authoring
+
+### Published package READMEs use absolute links, never relative ones
+
+A published package's `README.md` is its **npm landing page** — npmjs.com renders it for anyone
+viewing the package (e.g. `@galvanized-pukeko/vue-ui`). This rule governs every **published**
+package README under `packages/*/`. It does **not** apply to GitHub-only files that are never
+published to npm — the workspace-root `README.md`, this `GUIDELINES.md`, `CONTRIBUTING.md`, or a
+`"private": true` package's README — those are read on GitHub, where relative links work, so leave
+their relative links alone.
+
+**The rule:** in a published README, any link or image that points *outside the package's own
+published files* (its `package.json` `files` allowlist / tarball) — a sibling package, a repo file
+such as the root README or a `docs/*.md`, or an image — must be an **absolute URL**, never a
+repo-relative path (`../galvanized-pukeko-web-client`, `../../README.md`, `./docs/x.md`,
+`./assets/x.png`). npmjs.com does not serve the sibling files: it rewrites a relative link into a
+GitHub-source link or drops it (images), so a relative cross-package link never reaches the
+sibling's npm page. Intra-package `#anchors` and links to files that ship *inside the same tarball*
+stay relative.
+
+**For a cross-package reference to a sibling that is itself published on npm, give both absolute
+links — the npm page and the GitHub source:**
+
+```markdown
+- [`@galvanized-pukeko/vue-ui`](https://www.npmjs.com/package/@galvanized-pukeko/vue-ui) — Vue 3
+  component library
+  ([source](https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/galvanized-pukeko-vue-ui))
+```
+
+- **npm page** — `https://www.npmjs.com/package/<name>`, only for packages actually published to
+  npm. A sibling that is **private or not an npm package** (e.g. the ADK Java app, or a
+  `"private": true` package) has no npm page, so link its **GitHub source only**.
+- **GitHub source** — a package →
+  `https://github.com/pukeko-robotics/galvanized-pukeko/tree/main/packages/<dir>`; a repo file →
+  `https://github.com/pukeko-robotics/galvanized-pukeko/blob/main/<path>` (append `#anchor` to
+  deep-link a heading). The org is `pukeko-robotics`.
+
+**Self-check (must pass before you ship):**
+`grep -nE '\]\(\.\.?/|src="\.\.?/' packages/*/README.md` returns nothing — every match is a
+relative link that will misresolve on npm; replace it with the absolute form above.
+
