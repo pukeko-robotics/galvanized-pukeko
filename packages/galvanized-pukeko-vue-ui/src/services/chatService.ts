@@ -44,6 +44,29 @@ export interface AssistantStreamingMessage {
   done: boolean
 }
 
+/**
+ * Attach a tool result to the matching tool-call part in `parts`, in place.
+ * Returns whether anything changed. Skips parts that already carry a result
+ * (the streaming TOOL_CALL_RESULT path got there first — this is then a no-op).
+ *
+ * Exists for the client-fulfilled tool path (RC-14): those handlers run in
+ * `runLoop` *after* RUN_FINISHED and their result rides the next resume POST,
+ * not a TOOL_CALL_RESULT event on the run's subscriber — so without an explicit
+ * attach the stored part would never receive its result and a per-tool result
+ * renderer (PLAT-17) could never mount for them.
+ */
+export function attachToolResult(parts: MessagePart[], toolCallId: string, content: string): boolean {
+  let changed = false
+  for (const part of parts) {
+    if (part.kind === 'tool-call' && part.toolCallId === toolCallId && part.result == null) {
+      part.result = content
+      part.status = 'complete'
+      changed = true
+    }
+  }
+  return changed
+}
+
 export interface ChatCallbacks {
   onRunStart?: (runId: string) => void
   onMessageUpdate: (msg: AssistantStreamingMessage) => void
@@ -527,6 +550,15 @@ export class ChatService {
         // Handler has run; don't fulfil this id again even if the server never
         // records a tool-result message for it (the returnDirect case).
         fulfilledIds.add(next.id)
+
+        // Surface the client-fulfilled result to the UI (RC-14). This runs
+        // after RUN_FINISHED — the result rides the resume POST below, never a
+        // TOOL_CALL_RESULT event on this run's subscriber — so this callback is
+        // the badge's only path to a client tool's result. Consumers (e.g.
+        // ChatInterface) attach it to the stored tool-call part.
+        const resultContent =
+          typeof resumeValue === 'string' ? resumeValue : (JSON.stringify(resumeValue) ?? '')
+        callbacks.onToolCallResult?.(next.id, next.name, resultContent)
 
         // Drain any queued messages onto this resume so the agent sees them
         // alongside the tool result, before it decides the next action.

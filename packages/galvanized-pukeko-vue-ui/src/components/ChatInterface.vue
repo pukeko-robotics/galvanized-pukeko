@@ -5,7 +5,7 @@ import PkInput from './PkInput.vue'
 import PkNewConversationButton from './PkNewConversationButton.vue'
 import PkProgressBar from './PkProgressBar.vue'
 import ToolCallBadge from './ToolCallBadge.vue'
-import {chatService, runState, statusText} from '../services/chatService'
+import {attachToolResult, chatService, runState, statusText} from '../services/chatService'
 import type {
   AssistantStreamingMessage,
   ChatCallbacks,
@@ -117,6 +117,15 @@ function createStreamCallbacks(): ChatCallbacks {
       // race the still-open SSE stream against the resume POST.
     },
     onToolCallResult(toolCallId: string, toolCallName: string, content: string) {
+      // Attach the result to the stored tool-call part (RC-14). Server-fulfilled
+      // tools already got theirs via the streaming TOOL_CALL_RESULT event (the
+      // attach is then a no-op); client-fulfilled handlers run after
+      // RUN_FINISHED, so this callback is their only path onto the badge —
+      // without it a PLAT-17 result renderer (e.g. the robot's inline images)
+      // could never mount for a client tool.
+      for (const m of messages.value) {
+        if (m.kind === 'assistant') attachToolResult(m.parts, toolCallId, content)
+      }
       if (toolCallName === 'show_a2ui_surface' && props.a2ui) {
         try {
           props.a2ui.processBatch(parseA2UIJsonl(content))
