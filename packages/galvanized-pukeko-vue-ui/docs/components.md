@@ -119,3 +119,32 @@ Pass `tools` to `sendMessage` and provide handlers; when the agent calls one, `C
 runs your handler and resumes the run with the result. This is how browser-side capabilities
 (camera, geolocation, robot motion, …) are exposed to the agent. See the
 [robot controller](https://github.com/andruhon/pukeko-robot-controller) for a worked example.
+
+### The shared `capture_image` client tool
+
+The library ships one ready-made client tool: `capture_image`, a single-frame webcam capture.
+The agent calls it, the browser grabs a frame, and the result comes back as a JSON envelope —
+`{ "mimeType": "image/jpeg", "data": "<base64>" }` on success, `{ "error": "…" }` on failure.
+Register it once on whichever chat surface you use:
+
+```ts
+// Bespoke ChatInterface path:
+import { createCaptureImageClientTool, webcamPanelCaptureSource } from '@galvanized-pukeko/vue-ui'
+
+const capture = createCaptureImageClientTool(webcamPanelCaptureSource(() => webcamPanelRef.value))
+// <ChatInterface :client-tools="[capture.tool]"
+//                :client-tool-handlers="{ [capture.tool.name]: capture.handler }" />
+
+// Headless CopilotKit path:
+import { createCaptureImageFrontendTool } from '@galvanized-pukeko/vue-ui/copilot'
+
+const frontendTools = [createCaptureImageFrontendTool()] // create once — stable array
+// <HeadlessChatApp :frontend-tools="frontendTools" />  (or via PukekoCopilot)
+```
+
+Frames come from an `ImageCaptureSource`: `webcamPanelCaptureSource` adapts a mounted
+`PkWebcamPanel`, while the headless default `createOnDemandCaptureSource()` opens
+`getUserMedia`, captures one frame, and releases the camera again. Pass
+`{ description: '…' }` to either factory to tell the model what your camera actually
+shows. No server-side setup is needed with the gaunt-sloth AG-UI backend — the run-input
+declaration alone binds the tool as a client-side interrupt.

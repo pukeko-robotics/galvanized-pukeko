@@ -28,6 +28,31 @@ export type { UiMode, A2UITarget } from './copilot/types'
 export { toBubbles } from './copilot/useHeadlessChat'
 export type { ChatBubble, AgentMessageLike } from './copilot/useHeadlessChat'
 
+// Shared `capture_image` client tool, headless registration (PLAT-18): build
+// the CopilotKit frontend tool and pass it via the `frontendTools` prop of
+// HeadlessChatApp / PukekoCopilot. The generic capture layer itself is
+// re-exported here too so copilot-only consumers have a single import path
+// (like the registry/theming re-exports above, the two bundles share behaviour
+// through the frozen envelope contract, not module identity).
+export { createCaptureImageFrontendTool } from './copilot/captureImageFrontendTool'
+export type { CaptureImageFrontendToolOptions } from './copilot/captureImageFrontendTool'
+export {
+  CAPTURE_IMAGE_TOOL_NAME,
+  CAPTURE_IMAGE_DEFAULT_DESCRIPTION,
+  frameToEnvelope,
+  captureImageResult,
+  createCaptureImageToolDeclaration,
+  createCaptureImageClientTool,
+  webcamPanelCaptureSource,
+  createOnDemandCaptureSource,
+} from './services/captureImage'
+export type {
+  ImageEnvelope,
+  ImageCaptureSource,
+  CaptureImageToolOptions,
+  OnDemandCaptureOptions,
+} from './services/captureImage'
+
 // Per-tool display registry (PLAT-17). Re-exported here as well as from the
 // library root so a consumer importing the headless surface from this sub-path
 // can register renderers against the SAME registry the shared ToolCallBadge

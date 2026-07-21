@@ -48,6 +48,29 @@ export {
 export { runState, statusText, chatService } from './services/chatService'
 export type { RunState, Message, Tool, UserMessage, ToolCallPart } from './services/chatService'
 
+// Shared `capture_image` client tool (PLAT-18): the generic single-frame webcam
+// capture layer — declaration, capture-to-envelope handler, and capture-source
+// helpers — registerable on the bespoke ChatInterface path via
+// createCaptureImageClientTool. The headless CopilotKit registration lives in
+// the `./copilot` sub-export (createCaptureImageFrontendTool) so this entry
+// stays free of @copilotkit/vue.
+export {
+  CAPTURE_IMAGE_TOOL_NAME,
+  CAPTURE_IMAGE_DEFAULT_DESCRIPTION,
+  frameToEnvelope,
+  captureImageResult,
+  createCaptureImageToolDeclaration,
+  createCaptureImageClientTool,
+  webcamPanelCaptureSource,
+  createOnDemandCaptureSource,
+} from './services/captureImage'
+export type {
+  ImageEnvelope,
+  ImageCaptureSource,
+  CaptureImageToolOptions,
+  OnDemandCaptureOptions,
+} from './services/captureImage'
+
 // Per-tool display registry (PLAT-17) — lets a consumer register a bespoke
 // result renderer / summariser / glyph for its own tool WITHOUT patching vue-ui.
 // The shared ToolCallBadge dispatches on it (custom renderer or generic
