@@ -60,6 +60,39 @@ describe('toBubbles (headless message projection)', () => {
     })
   })
 
+  // PLAT-18: the headless analogue of RC-14's bespoke attachToolResult. A
+  // CLIENT-fulfilled tool's result never arrives as a TOOL_CALL_RESULT event —
+  // CopilotKit's processAgentResult runs the frontend-tool handler after
+  // RUN_FINISHED and splices the result into `agent.messages` as a `tool`
+  // message right after the calling assistant message. toBubbles must attach
+  // that message to the stored part so ToolCallBadge can show the result (and a
+  // PLAT-17 renderer can mount) on the headless path too.
+  it('attaches a client-fulfilled (spliced tool message) capture_image envelope to its part', () => {
+    const envelope = JSON.stringify({ mimeType: 'image/jpeg', data: '/9j/4AAQSkZJRg==' })
+    const msgs: AgentMessageLike[] = [
+      { id: 'u1', role: 'user', content: 'take a photo' },
+      {
+        id: 'a1',
+        role: 'assistant',
+        toolCalls: [{ id: 'tc1', function: { name: 'capture_image', arguments: '{}' } }],
+      },
+      // CopilotKit-spliced client-tool result (no streamed TOOL_CALL_RESULT).
+      { id: 't1', role: 'tool', toolCallId: 'tc1', content: envelope },
+      // The resume run's follow-up text.
+      { id: 'a2', role: 'assistant', content: 'I can see the desk.' },
+    ]
+    const bubbles = toBubbles(msgs)
+    expect(bubbles).toHaveLength(3)
+    const assistant = bubbles[1]
+    if (assistant.kind !== 'assistant') throw new Error('expected assistant')
+    expect(assistant.parts[0]).toMatchObject({
+      kind: 'tool-call',
+      toolCallName: 'capture_image',
+      result: envelope,
+      status: 'complete',
+    })
+  })
+
   it('tolerates malformed tool-call arguments without throwing', () => {
     const msgs: AgentMessageLike[] = [
       {

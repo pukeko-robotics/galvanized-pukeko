@@ -19,6 +19,7 @@
 import StockChatApp from './StockChatApp.vue'
 import HeadlessChatApp from './HeadlessChatApp.vue'
 import CoreApp from '../CoreApp.vue'
+import type { VueFrontendTool } from '@copilotkit/vue/v2'
 import type { UiMode, A2UITarget } from './types'
 
 withDefaults(
@@ -32,8 +33,14 @@ withDefaults(
      * split `panel` (bespoke parity); only meaningful when `uiMode === 'headless'`.
      */
     a2uiTarget?: A2UITarget
+    /**
+     * Client tools to register with CopilotKit (PLAT-18), e.g.
+     * `[createCaptureImageFrontendTool()]`. Forwarded to the headless shell
+     * (stable array — create once); only meaningful when `uiMode === 'headless'`.
+     */
+    frontendTools?: VueFrontendTool[]
   }>(),
-  { uiMode: 'bespoke', agUiUrl: '', a2uiTarget: 'panel' },
+  { uiMode: 'bespoke', agUiUrl: '', a2uiTarget: 'panel', frontendTools: () => [] },
 )
 </script>
 
@@ -43,6 +50,7 @@ withDefaults(
     v-else-if="uiMode === 'headless'"
     :ag-ui-url="agUiUrl"
     :a2ui-target="a2uiTarget"
+    :frontend-tools="frontendTools"
   />
   <CoreApp v-else />
 </template>
