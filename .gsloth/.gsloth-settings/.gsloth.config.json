@@ -7,15 +7,19 @@
     "type": "openrouter",
     "model": "google/gemini-2.5-pro"
   },
-  "projectGuidelines": "GUIDELINES.md",
+  "prompts": {
+    "guidelines": "GUIDELINES.md"
+  },
   "commands": {
     "code": {
       "filesystem": "all",
-      "devTools": {
-        "run_build": "build-ui-server",
-        "run_lint": "pnpm -r run lint",
-        "run_tests": "pnpm -r run test",
-        "run_single_test": "pnpm --filter ./packages/${testPath} run test"
+      "builtInTools": {
+        "gth_checklist": true,
+        "gth_grep": true,
+        "run_build": { "command": "build-ui-server" },
+        "run_lint": { "command": "pnpm -r run lint" },
+        "run_tests": { "command": "pnpm -r run test" },
+        "run_single_test": { "command": "pnpm --filter ./packages/${testPath} run test" }
       }
     }
   }
