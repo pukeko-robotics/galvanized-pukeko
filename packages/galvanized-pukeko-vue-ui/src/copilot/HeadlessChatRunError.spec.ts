@@ -27,7 +27,7 @@ vi.mock('@copilotkit/vue/v2', () => ({
 
 interface CapturedSubscriber {
   onRunErrorEvent?: (params: { event: { message?: string } }) => void
-  onRunFailed?: (params: { error?: { message?: string } }) => void
+  onRunFailed?: (params: { error?: { message?: string; name?: string } }) => void
 }
 
 function setAgentWithSubscribe() {
@@ -81,6 +81,45 @@ describe('HeadlessChat run-error surfacing (PLAT-13)', () => {
     captured.subscriber!.onRunFailed!({ error: { message: 'network down' } })
     await nextTick()
 
+    expect(wrapper.find('[data-testid="pk-headless-error"]').text()).toContain('network down')
+    errSpy.mockRestore()
+  })
+
+  it('suppresses the user-Stop abort signal — no banner, no console.error (review IMPORTANT-1)', async () => {
+    // `abortRun()` (the Stop button path) surfaces to instance subscribers as
+    // a synthesized RUN_ERROR with this exact message (proven empirically
+    // against @ag-ui/client 0.0.57 with an SSE stub). The bespoke path
+    // suppressed it via its `stopped` latch; the banner must NOT paint.
+    const { captured } = setAgentWithSubscribe()
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const wrapper = mount(HeadlessChat, { props: { agentId: 'default', a2uiTarget: 'chat' } })
+
+    captured.subscriber!.onRunErrorEvent!({ event: { message: 'This operation was aborted' } })
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="pk-headless-error"]').exists()).toBe(false)
+    expect(errSpy).not.toHaveBeenCalled()
+    errSpy.mockRestore()
+  })
+
+  it('suppresses every abort-shaped run failure (AbortError name + known messages)', async () => {
+    const { captured } = setAgentWithSubscribe()
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const wrapper = mount(HeadlessChat, { props: { agentId: 'default', a2uiTarget: 'chat' } })
+
+    // The filter shapes @ag-ui/client/@copilotkit/core themselves key on.
+    captured.subscriber!.onRunFailed!({ error: { message: 'irrelevant', name: 'AbortError' } })
+    captured.subscriber!.onRunFailed!({ error: { message: 'Fetch is aborted' } })
+    captured.subscriber!.onRunFailed!({ error: { message: 'signal is aborted without reason' } })
+    captured.subscriber!.onRunFailed!({ error: { message: 'component unmounted' } })
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="pk-headless-error"]').exists()).toBe(false)
+    expect(errSpy).not.toHaveBeenCalled()
+
+    // A REAL error arriving after suppressed aborts still surfaces.
+    captured.subscriber!.onRunFailed!({ error: { message: 'network down' } })
+    await nextTick()
     expect(wrapper.find('[data-testid="pk-headless-error"]').text()).toContain('network down')
     errSpy.mockRestore()
   })

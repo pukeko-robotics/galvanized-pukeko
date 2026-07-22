@@ -76,15 +76,37 @@ const isRunning = computed(() => sending.value || agent.value?.isRunning === tru
 // (`?.`) because unit-test agent fakes are minimal objects without it.
 // Getter-form watch source: tracks the real ShallowRef in production and
 // still fires once (immediate) under the specs' plain `{ value }` holder.
+//
+// Abort-shaped signals are NOT errors: a user Stop ({@link stop} →
+// `abortRun()`) reaches instance subscribers as a synthesized RUN_ERROR
+// ("This operation was aborted"), and a fetch-level AbortError reaches
+// subscriber `onRunFailed` BEFORE @ag-ui/client's own abort filter (that
+// filter suppresses only the rethrow/log, never subscriber dispatch). The
+// bespoke path deliberately suppressed these via its `stopped` latch —
+// painting the banner on Stop would be a regression, so filter the same
+// shapes @ag-ui/client/@copilotkit/core key on, plus the synthesized-event
+// message observed from `abortRun()`.
+const ABORT_SIGNAL_MESSAGES = [
+  'This operation was aborted', // abortRun() → synthesized RUN_ERROR event
+  'Fetch is aborted',
+  'signal is aborted without reason',
+  'component unmounted',
+]
+function isAbortSignal(message: string | undefined, name?: string): boolean {
+  if (name === 'AbortError') return true
+  return !!message && ABORT_SIGNAL_MESSAGES.some((m) => message.includes(m))
+}
 watch(
   () => agent.value,
   (a, _prev, onCleanup) => {
     const sub = a?.subscribe?.({
       onRunErrorEvent: ({ event }) => {
+        if (isAbortSignal(event.message)) return
         errorText.value = event.message || 'Agent run failed'
         console.error('[HeadlessChat] Run error:', event.message)
       },
       onRunFailed: ({ error }) => {
+        if (isAbortSignal(error?.message, error?.name)) return
         errorText.value = error?.message ? String(error.message) : 'Agent run failed'
         console.error('[HeadlessChat] Run failed:', error)
       },
