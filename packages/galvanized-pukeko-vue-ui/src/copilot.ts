@@ -28,9 +28,9 @@ export type { UiMode, A2UITarget } from './copilot/types'
 export { toBubbles } from './copilot/useHeadlessChat'
 export type { ChatBubble, AgentMessageLike } from './copilot/useHeadlessChat'
 
-// Shared `capture_image` client tool, headless registration (PLAT-18): build
-// the CopilotKit frontend tool and pass it via the `frontendTools` prop of
-// HeadlessChatApp / PukekoCopilot. The generic capture layer itself is
+// Shared `capture_image` client tool, CopilotKit registration (PLAT-18/PLAT-29):
+// build the CopilotKit frontend tool and pass it via the `frontendTools` prop of
+// HeadlessChatApp / StockChatApp / PukekoCopilot. The generic capture layer itself is
 // re-exported here too so copilot-only consumers have a single import path
 // (like the registry/theming re-exports above, the two bundles share behaviour
 // through the frozen envelope contract, not module identity).
