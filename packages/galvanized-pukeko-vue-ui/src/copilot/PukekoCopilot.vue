@@ -34,9 +34,10 @@ withDefaults(
      */
     a2uiTarget?: A2UITarget
     /**
-     * Client tools to register with CopilotKit (PLAT-18), e.g.
-     * `[createCaptureImageFrontendTool()]`. Forwarded to the headless shell
-     * (stable array — create once); only meaningful when `uiMode === 'headless'`.
+     * Client tools to register with CopilotKit (PLAT-18/PLAT-29), e.g.
+     * `[createCaptureImageFrontendTool()]`. Forwarded to the CopilotKit shells
+     * (stable array — create once); meaningful for the CopilotKit modes
+     * (`uiMode === 'stock' | 'headless'`).
      */
     frontendTools?: VueFrontendTool[]
   }>(),
@@ -45,7 +46,7 @@ withDefaults(
 </script>
 
 <template>
-  <StockChatApp v-if="uiMode === 'stock'" :ag-ui-url="agUiUrl" />
+  <StockChatApp v-if="uiMode === 'stock'" :ag-ui-url="agUiUrl" :frontend-tools="frontendTools" />
   <HeadlessChatApp
     v-else-if="uiMode === 'headless'"
     :ag-ui-url="agUiUrl"

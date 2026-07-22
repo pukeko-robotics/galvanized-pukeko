@@ -18,11 +18,23 @@
  * `uiMode` shell.
  */
 import { shallowRef } from 'vue'
-import { CopilotKitProvider, CopilotChat, HttpAgent } from '@copilotkit/vue/v2'
+import { CopilotKitProvider, CopilotChat, HttpAgent, type VueFrontendTool } from '@copilotkit/vue/v2'
 import { configService } from '../services/configService'
 import A2UIRenderToolBridge from './A2UIRenderToolBridge.vue'
 
-const props = withDefaults(defineProps<{ agUiUrl?: string }>(), { agUiUrl: '' })
+const props = withDefaults(
+  defineProps<{
+    agUiUrl?: string
+    /**
+     * Client tools the host registers with CopilotKit (PLAT-18/PLAT-29), e.g.
+     * `[createCaptureImageFrontendTool()]`. Forwarded to `CopilotKitProvider`'s
+     * `frontendTools`, so the same stable-array contract applies: create the
+     * array once, not per render.
+     */
+    frontendTools?: VueFrontendTool[]
+  }>(),
+  { agUiUrl: '', frontendTools: () => [] },
+)
 
 // Agent id "default" matches AG-UI's `/agents/default/run` path and
 // CopilotKit's DEFAULT_AGENT_ID, so CopilotChat resolves it without an explicit
@@ -33,7 +45,10 @@ const selfManagedAgents = { default: agent.value }
 </script>
 
 <template>
-  <CopilotKitProvider :self-managed-agents="selfManagedAgents">
+  <CopilotKitProvider
+    :self-managed-agents="selfManagedAgents"
+    :frontend-tools="props.frontendTools"
+  >
     <div class="pk-stock-chat-app">
       <A2UIRenderToolBridge agent-id="default" />
       <CopilotChat />

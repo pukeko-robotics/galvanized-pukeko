@@ -135,12 +135,20 @@ const capture = createCaptureImageClientTool(webcamPanelCaptureSource(() => webc
 // <ChatInterface :client-tools="[capture.tool]"
 //                :client-tool-handlers="{ [capture.tool.name]: capture.handler }" />
 
-// Headless CopilotKit path:
+// CopilotKit path (stock or headless):
 import { createCaptureImageFrontendTool } from '@galvanized-pukeko/vue-ui/copilot'
 
 const frontendTools = [createCaptureImageFrontendTool()] // create once — stable array
-// <HeadlessChatApp :frontend-tools="frontendTools" />  (or via PukekoCopilot)
+// <HeadlessChatApp :frontend-tools="frontendTools" />
+// <StockChatApp    :frontend-tools="frontendTools" />
+// or via <PukekoCopilot ui-mode="stock|headless" :frontend-tools="frontendTools" />
 ```
+
+Both CopilotKit surfaces — `StockChatApp` (CopilotKit's own chat) and `HeadlessChatApp`
+(our headless UI) — accept the same `frontendTools` prop and forward it to
+`CopilotKitProvider`, so any client tool registers identically regardless of surface.
+Pass a **stable** array (create it once, outside render) to avoid churning the provider.
+`PukekoCopilot` forwards the prop to whichever CopilotKit surface `uiMode` selects.
 
 Frames come from an `ImageCaptureSource`: `webcamPanelCaptureSource` adapts a mounted
 `PkWebcamPanel`, while the headless default `createOnDemandCaptureSource()` opens
