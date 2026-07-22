@@ -66,6 +66,34 @@ const bubbles = computed(() =>
 
 const isRunning = computed(() => sending.value || agent.value?.isRunning === true)
 
+// PLAT-13: surface run errors in the existing error banner. CopilotKit core
+// catches a failed run internally (`runAgent` RESOLVES normally with no new
+// messages), so without this subscription a mid-run server error — e.g. a
+// failed resume after a client-tool fulfilment — ends the run SILENTLY: no
+// banner, no console line, Stop button simply disappears. The bespoke
+// chatService `console.error`'d + `onError`'d every RUN_ERROR; keep that
+// visibility on the surviving engine. `subscribe` is called defensively
+// (`?.`) because unit-test agent fakes are minimal objects without it.
+// Getter-form watch source: tracks the real ShallowRef in production and
+// still fires once (immediate) under the specs' plain `{ value }` holder.
+watch(
+  () => agent.value,
+  (a, _prev, onCleanup) => {
+    const sub = a?.subscribe?.({
+      onRunErrorEvent: ({ event }) => {
+        errorText.value = event.message || 'Agent run failed'
+        console.error('[HeadlessChat] Run error:', event.message)
+      },
+      onRunFailed: ({ error }) => {
+        errorText.value = error?.message ? String(error.message) : 'Agent run failed'
+        console.error('[HeadlessChat] Run failed:', error)
+      },
+    })
+    if (sub) onCleanup(() => sub.unsubscribe())
+  },
+  { immediate: true },
+)
+
 /** A completed `show_a2ui_surface` tool-call part whose JSONL result is present. */
 type A2UISurfacePart = Extract<MessagePart, { kind: 'tool-call' }> & { result: string }
 
