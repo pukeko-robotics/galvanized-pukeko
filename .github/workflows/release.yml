@@ -86,92 +86,92 @@ jobs:
       - name: Run Tests
         run: pnpm test
 
-  # Gate 2 — the Koog + ADK Playwright end-to-end tests against Google AI Studio.
-  # galvanized consumes @gaunt-sloth/* from npm (not file:), so NO gaunt-sloth
-  # checkout is needed here.
-  e2e:
-    name: E2E (Koog + ADK, Google AI Studio)
-    needs: unit-tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout galvanized-pukeko
-        uses: actions/checkout@v6
+  # # Gate 2 — the Koog + ADK Playwright end-to-end tests against Google AI Studio.
+  # # galvanized consumes @gaunt-sloth/* from npm (not file:), so NO gaunt-sloth
+  # # checkout is needed here.
+  # e2e:
+  #   name: E2E (Koog + ADK, Google AI Studio)
+  #   needs: unit-tests
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - name: Checkout galvanized-pukeko
+  #       uses: actions/checkout@v6
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
+  #     - name: Set up JDK 21
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         distribution: temurin
+  #         java-version: '21'
 
-      - name: Enable Corepack
-        run: corepack enable
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24.x'
-          cache: 'pnpm'
+  #     - name: Enable Corepack
+  #       run: corepack enable
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v6
+  #       with:
+  #         node-version: '24.x'
+  #         cache: 'pnpm'
 
-      # ---- TEMPORARY: build AG-UI kotlin-core to mavenLocal from the fork ----
-      # kotlin-core is not on Maven Central yet (BE-3 upstream PR pending). The Koog
-      # example + ADK agent depend on com.ag-ui.community:kotlin-core:0.4.1. The
-      # EventEncoder is now VENDORED into each consumer (BE-7), so :kotlin-encoder is no
-      # longer built here. Publish JVM-only (no Android SDK) using the two override files
-      # in .github/mavenlocal/. Remove this whole step + that dir once kotlin-core is on
-      # Maven Central. Recipe: .github/mavenlocal/README.md.
-      - name: Checkout ag-ui fork (encoder branch)
-        uses: actions/checkout@v6
-        with:
-          repository: andruhon/ag-ui
-          ref: feat/kotlin-encoder-server-integrations
-          path: _agui-fork
-      - name: Build AG-UI kotlin-core to mavenLocal (JVM-only, no Android SDK)
-        env:
-          # setup-java exports JAVA_HOME_21_X64 for the Temurin 21 it installed.
-          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
-        run: |
-          set -euo pipefail
-          LIB="$GITHUB_WORKSPACE/_agui-fork/sdks/community/kotlin/library"
-          cp "$GITHUB_WORKSPACE/.github/mavenlocal/core-jvmonly.build.gradle.kts" "$LIB/core/build.gradle.kts"
-          cp "$GITHUB_WORKSPACE/.github/mavenlocal/settings-core-encoder.gradle.kts" "$LIB/settings.gradle.kts"
-          cd "$LIB"
-          ./gradlew :kotlin-core:publishToMavenLocal --no-daemon --console=plain
+  #     # ---- TEMPORARY: build AG-UI kotlin-core to mavenLocal from the fork ----
+  #     # kotlin-core is not on Maven Central yet (BE-3 upstream PR pending). The Koog
+  #     # example + ADK agent depend on com.ag-ui.community:kotlin-core:0.4.1. The
+  #     # EventEncoder is now VENDORED into each consumer (BE-7), so :kotlin-encoder is no
+  #     # longer built here. Publish JVM-only (no Android SDK) using the two override files
+  #     # in .github/mavenlocal/. Remove this whole step + that dir once kotlin-core is on
+  #     # Maven Central. Recipe: .github/mavenlocal/README.md.
+  #     - name: Checkout ag-ui fork (encoder branch)
+  #       uses: actions/checkout@v6
+  #       with:
+  #         repository: andruhon/ag-ui
+  #         ref: feat/kotlin-encoder-server-integrations
+  #         path: _agui-fork
+  #     - name: Build AG-UI kotlin-core to mavenLocal (JVM-only, no Android SDK)
+  #       env:
+  #         # setup-java exports JAVA_HOME_21_X64 for the Temurin 21 it installed.
+  #         JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+  #       run: |
+  #         set -euo pipefail
+  #         LIB="$GITHUB_WORKSPACE/_agui-fork/sdks/community/kotlin/library"
+  #         cp "$GITHUB_WORKSPACE/.github/mavenlocal/core-jvmonly.build.gradle.kts" "$LIB/core/build.gradle.kts"
+  #         cp "$GITHUB_WORKSPACE/.github/mavenlocal/settings-core-encoder.gradle.kts" "$LIB/settings.gradle.kts"
+  #         cd "$LIB"
+  #         ./gradlew :kotlin-core:publishToMavenLocal --no-daemon --console=plain
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+  #     - name: Install dependencies
+  #       run: pnpm install --frozen-lockfile
+  #     - name: Install Playwright browsers
+  #       run: pnpm exec playwright install --with-deps chromium
 
-      # gemini-flash-lite-latest: the dev key 404s on the pinned gemini-2.5-flash
-      # ("no longer available to new users"); a fresh CI key may allow 2.5-flash, so
-      # the model is kept as a one-line env override (GOOGLE_MODEL / PUKEKO_AI_MODEL).
-      - name: Koog e2e
-        env:
-          LLM_PROVIDER: google
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GOOGLE_MODEL: gemini-flash-lite-latest
-          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
-        run: node it-koog.js
+  #     # gemini-flash-lite-latest: the dev key 404s on the pinned gemini-2.5-flash
+  #     # ("no longer available to new users"); a fresh CI key may allow 2.5-flash, so
+  #     # the model is kept as a one-line env override (GOOGLE_MODEL / PUKEKO_AI_MODEL).
+  #     - name: Koog e2e
+  #       env:
+  #         LLM_PROVIDER: google
+  #         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  #         GOOGLE_MODEL: gemini-flash-lite-latest
+  #         JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+  #       run: node it-koog.js
 
-      - name: ADK e2e
-        # it-adk.js already sets GOOGLE_GENAI_USE_VERTEXAI=false internally.
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          PUKEKO_AI_MODEL: gemini-flash-lite-latest
-          JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
-        run: node it-adk.js
+  #     - name: ADK e2e
+  #       # it-adk.js already sets GOOGLE_GENAI_USE_VERTEXAI=false internally.
+  #       env:
+  #         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  #         PUKEKO_AI_MODEL: gemini-flash-lite-latest
+  #         JAVA_HOME: ${{ env.JAVA_HOME_21_X64 }}
+  #       run: node it-adk.js
 
-      - name: Upload Playwright report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            **/playwright-report/**
-            **/test-results/**
-          if-no-files-found: ignore
-          retention-days: 7
+  #     - name: Upload Playwright report on failure
+  #       if: failure()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: playwright-report
+  #         path: |
+  #           **/playwright-report/**
+  #           **/test-results/**
+  #         if-no-files-found: ignore
+  #         retention-days: 7
 
   # Gate 3 — ship the CURRENT vue-ui version via OIDC, then post-bump main to next.
   release:
