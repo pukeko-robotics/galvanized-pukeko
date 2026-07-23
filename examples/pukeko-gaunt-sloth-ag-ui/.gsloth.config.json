@@ -7,6 +7,7 @@
     }
   },
   "builtInTools": ["show_a2ui_surface"],
+  "middleware": ["frontend-image-injection"],
   "streamOutput": true,
   "commands": {
     "api": {
