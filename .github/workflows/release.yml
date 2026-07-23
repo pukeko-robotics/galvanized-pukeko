@@ -176,6 +176,7 @@ jobs:
   # Gate 3 — ship the CURRENT vue-ui version via OIDC, then post-bump main to next.
   release:
     name: Publish vue-ui (OIDC), then post-bump main
+    needs: unit-tests
     # needs: e2e
     runs-on: ubuntu-latest
     # Must match the Environment name in npm's Trusted Publisher config: OIDC only
