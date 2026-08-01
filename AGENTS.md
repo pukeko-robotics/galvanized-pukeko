@@ -9,6 +9,24 @@ The repositories we are working on are:
 - `packages/galvanized-pukeko-web-client` — Web client host (serves Vue UI build, owns `config.json` and Playwright tests)
 - `packages/gaunt-sloth-assistant` — TypeScript CLI tool for agent workflows
 
+## Committing
+
+**Write the commit message to a file and commit with `git commit -F <file>` — never `git commit
+-m`.** This is a hard safety rule, not a style preference. Inside double quotes bash treats a
+backtick or `$(…)` as **shell command substitution**, so a message that quotes code the way ordinary
+prose does is *executed* before git ever runs; that failure has already destroyed a working tree on
+a developer machine. A file path carries no shell metacharacters, so with `-F` no part of the
+message can reach a shell — and multi-paragraph bodies, quotes and trailers survive with no
+escaping.
+
+- **Create the message file with your file-write tool** — never `echo "..." > msg.txt` and never an
+  unquoted heredoc. Both put the identical prose back into a shell argument one layer up, which is
+  where this hazard silently returns.
+- Messages are plain English: what changed and why. No code, no shell commands, no backticks, no
+  markup.
+- The same applies to any long prose on a command line — prefer `gh pr create --body-file` and
+  `gh release create --notes-file` over `--body` / `--notes`.
+
 ## Copies for Reference
 
 Copies of important dependencies are available in the `./_readonly` directory for reference (do not edit):
