@@ -10,12 +10,17 @@ import {
 } from './theme'
 import { emeraldExample } from './theme.fixtures'
 // SFC source via Vite's `import.meta.glob` (`?raw` query, eager); global.css via
-// fs (Vitest returns "" for `.css?raw`, and its cwd is the package root). The
-// scoped <style> of a .vue file is NOT injected into jsdom, and jsdom never
+// fs (Vitest returns "" for `.css?raw`), resolved against THIS FILE's own
+// location rather than the process cwd, so the read works whichever directory
+// vitest is invoked from — via `import.meta.dirname` and NOT `new URL(...,
+// import.meta.url)`, which Vite rewrites into a served asset URL and which then
+// fails as "The URL must be of scheme file".
+//
+// The scoped <style> of a .vue file is NOT injected into jsdom, and jsdom never
 // resolves `var()` in computed style, so the component-level assertions inspect
 // the SFC source directly (the live-browser visual pass is the post-merge
 // follow-up per the brief).
-const globalCss = readFileSync('src/assets/global.css', 'utf8')
+const globalCss = readFileSync(`${import.meta.dirname}/assets/global.css`, 'utf8')
 
 // Discover MIGRATED by globbing the package's component source dirs, rather
 // than a hardcoded allowlist, so a future component that starts referencing
