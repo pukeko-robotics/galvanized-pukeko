@@ -149,6 +149,59 @@ export interface OnDemandCaptureOptions {
   maxSize?: number
   /** JPEG quality 0..1 (default 0.8, matching PkWebcamPanel). */
   quality?: number
+  /**
+   * Milliseconds to let the sensor settle after the first painted frame, before
+   * drawing (default {@link DEFAULT_SETTLE_MS}). A camera opened seconds ago is
+   * already exposed correctly; one opened microseconds ago is not.
+   */
+  settleMs?: number
+}
+
+/**
+ * Sensor-settle delay after the first painted frame. A webcam's opening frames are
+ * near-black while auto-exposure and auto-gain ramp up, and this source opens the
+ * camera fresh on every capture, so it pays that cold start each time — unlike a
+ * mounted {@link webcamPanelCaptureSource} panel, which has been streaming for
+ * seconds by the time anyone captures from it.
+ */
+export const DEFAULT_SETTLE_MS = 300
+
+/** Longest we wait for a decoded, painted frame before drawing anyway. */
+const PAINTED_FRAME_TIMEOUT_MS = 2_000
+
+/** `requestVideoFrameCallback` is not in every lib.dom we build against. */
+type VideoWithFrameCallback = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: () => void) => number
+}
+
+/**
+ * Resolve once the video has actually PAINTED a frame.
+ *
+ * `loadedmetadata` fires when the stream's dimensions are known — which is not the
+ * same as a frame having been decoded and painted. Drawing at that point produces a
+ * perfectly well-formed JPEG of pure black, which reads as a camera/permission fault
+ * and is not one. `requestVideoFrameCallback` is the exact signal ("a new frame is
+ * ready to display"); where it is unavailable, two chained animation frames give the
+ * compositor a chance to present one.
+ *
+ * Always resolves — never rejects. If no frame is announced within
+ * {@link PAINTED_FRAME_TIMEOUT_MS} we draw regardless, because a possibly-blank frame
+ * still beats failing a capture the user explicitly asked for.
+ */
+async function waitForPaintedFrame(video: HTMLVideoElement): Promise<void> {
+  const withCallback = video as VideoWithFrameCallback
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, PAINTED_FRAME_TIMEOUT_MS)
+    const done = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    if (typeof withCallback.requestVideoFrameCallback === 'function') {
+      withCallback.requestVideoFrameCallback(done)
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(done))
+    }
+  })
 }
 
 /**
@@ -161,6 +214,7 @@ export interface OnDemandCaptureOptions {
 export function createOnDemandCaptureSource(opts: OnDemandCaptureOptions = {}): ImageCaptureSource {
   const maxSize = opts.maxSize ?? 640
   const quality = opts.quality ?? 0.8
+  const settleMs = opts.settleMs ?? DEFAULT_SETTLE_MS
 
   async function grabFrame(): Promise<string | null> {
     const mediaDevices = navigator.mediaDevices
@@ -187,6 +241,11 @@ export function createOnDemandCaptureSource(opts: OnDemandCaptureOptions = {}): 
           }
         })
       }
+
+      // Dimensions are known; a frame is not yet guaranteed to exist. Wait for one to
+      // be painted, then let the sensor settle, or we encode pure black (RC-19).
+      await waitForPaintedFrame(video)
+      if (settleMs > 0) await new Promise((resolve) => setTimeout(resolve, settleMs))
 
       let width = video.videoWidth
       let height = video.videoHeight
