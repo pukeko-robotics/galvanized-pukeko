@@ -92,6 +92,14 @@ export type {
   ToolDisplayEntry,
   ToolResultRendererProps,
 } from './components/toolDisplay'
+// RC-19: the shared `capture_image` result renderer — registered by the host so a
+// captured frame renders inline instead of falling through to the raw JSON view.
+export {
+  registerCaptureImageToolDisplay,
+  CaptureImageResult,
+  parseImageEnvelope,
+} from './components/toolDisplays'
+export type { ParsedToolResult } from './components/toolDisplays'
 
 // A2UI bridge — exported so host apps (e.g. the CopilotKit stock-UI mode in the
 // web-client) can render agent-driven A2UI surfaces using the same processor

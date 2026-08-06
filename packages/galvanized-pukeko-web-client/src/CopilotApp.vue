@@ -10,9 +10,16 @@
 import {
   PukekoCopilot,
   createCaptureImageFrontendTool,
+  registerCaptureImageToolDisplay,
   type UiMode,
   type A2UITarget,
 } from '@galvanized-pukeko/vue-ui/copilot'
+
+// RC-19: render a captured frame inline in the conversation. Without this the
+// badge falls through to the generic renderer and a capture shows as a raw
+// `{mimeType, data: <base64>}` blob. At module scope, not in setup: the PLAT-17
+// registry is not reactive, so it must be populated before any badge mounts.
+registerCaptureImageToolDisplay()
 
 // PLAT-19: the headless A2UI render target. Defaults to the split `panel`
 // (bespoke parity). `uiMode` defaults to `headless` — the app default surface

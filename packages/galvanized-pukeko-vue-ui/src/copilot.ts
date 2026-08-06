@@ -67,6 +67,14 @@ export {
   toolDisplayLabel,
 } from './components/toolDisplay'
 export type { ToolDisplayEntry, ToolResultRendererProps } from './components/toolDisplay'
+// RC-19: the shared `capture_image` result renderer — registered by the host so a
+// captured frame renders inline instead of falling through to the raw JSON view.
+export {
+  registerCaptureImageToolDisplay,
+  CaptureImageResult,
+  parseImageEnvelope,
+} from './components/toolDisplays'
+export type { ParsedToolResult } from './components/toolDisplays'
 
 // Theming (PLAT-23). Re-exported here as well as from the library root so a
 // consumer importing the headless surface from this sub-path can re-skin it via
