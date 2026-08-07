@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   CAPTURE_IMAGE_TOOL_NAME,
   CAPTURE_IMAGE_DEFAULT_DESCRIPTION,
@@ -135,5 +135,121 @@ describe('createOnDemandCaptureSource', () => {
   it('produces the standard not-initialized envelope through captureImageResult', async () => {
     const result = await captureImageResult(createOnDemandCaptureSource())
     expect(result).toBe(JSON.stringify({ error: 'Webcam not initialized' }))
+  })
+})
+
+// RC-19: the capture used to draw as soon as the stream reported its DIMENSIONS
+// (`loadedmetadata`), which does not mean a frame has been decoded and painted —
+// so it encoded a well-formed JPEG of pure black. These specs pin the wait for a
+// real painted frame. They are discriminating: with the draw moved back above the
+// wait, the first one fails on `drawImage` having already run.
+describe('createOnDemandCaptureSource — waits for a painted frame', () => {
+  const DATA_URL = 'data:image/jpeg;base64,PAINTED'
+  const restores: Array<() => void> = []
+
+  afterEach(() => {
+    while (restores.length) restores.pop()!()
+    vi.useRealTimers()
+  })
+
+  /** Stub just enough DOM for the capture path; returns the drawImage spy and,
+   *  when `announceFrame` is false, the withheld frame callback. */
+  function stubCaptureDom(options: { announceFrame: boolean; hasFrameCallback?: boolean }) {
+    const hasFrameCallback = options.hasFrameCallback ?? true
+    const drawImage = vi.fn()
+    let pendingFrameCallback: (() => void) | null = null
+
+    const stop = vi.fn()
+    const mediaDevices = { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop }] }) }
+    const originalMediaDevices = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
+    Object.defineProperty(navigator, 'mediaDevices', { value: mediaDevices, configurable: true })
+    restores.push(() => {
+      if (originalMediaDevices) Object.defineProperty(navigator, 'mediaDevices', originalMediaDevices)
+      else delete (navigator as unknown as Record<string, unknown>).mediaDevices
+    })
+
+    // Dimensions are available immediately — exactly the case that skipped the old
+    // `loadedmetadata` wait entirely and drew a blank canvas.
+    const videoProto = HTMLVideoElement.prototype as unknown as Record<string, unknown>
+    const mediaProto = HTMLMediaElement.prototype as unknown as Record<string, unknown>
+    const patch = (proto: Record<string, unknown>, key: string, value: unknown) => {
+      const original = Object.getOwnPropertyDescriptor(proto, key)
+      Object.defineProperty(proto, key, { value, configurable: true, writable: true })
+      restores.push(() => {
+        if (original) Object.defineProperty(proto, key, original)
+        else delete proto[key]
+      })
+    }
+    const patchGetter = (proto: Record<string, unknown>, key: string, get: () => unknown) => {
+      const original = Object.getOwnPropertyDescriptor(proto, key)
+      Object.defineProperty(proto, key, { get, configurable: true })
+      restores.push(() => {
+        if (original) Object.defineProperty(proto, key, original)
+        else delete proto[key]
+      })
+    }
+
+    patch(mediaProto, 'play', vi.fn().mockResolvedValue(undefined))
+    patchGetter(videoProto, 'videoWidth', () => 640)
+    patchGetter(videoProto, 'videoHeight', () => 480)
+
+    if (hasFrameCallback) {
+      patch(videoProto, 'requestVideoFrameCallback', (cb: () => void) => {
+        if (options.announceFrame) cb()
+        else pendingFrameCallback = cb
+        return 1
+      })
+    } else {
+      // Force the two-chained-animation-frames fallback.
+      patch(videoProto, 'requestVideoFrameCallback', undefined)
+    }
+
+    patch(HTMLCanvasElement.prototype as unknown as Record<string, unknown>, 'getContext', () => ({
+      drawImage,
+    }))
+    patch(
+      HTMLCanvasElement.prototype as unknown as Record<string, unknown>,
+      'toDataURL',
+      () => DATA_URL
+    )
+
+    return { drawImage, announcePendingFrame: () => pendingFrameCallback?.() }
+  }
+
+  it('does not draw until a frame has actually been painted', async () => {
+    const { drawImage, announcePendingFrame } = stubCaptureDom({ announceFrame: false })
+
+    const pending = createOnDemandCaptureSource({ settleMs: 0 }).captureFrame()
+    // Let getUserMedia + play settle; the frame callback is deliberately withheld.
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+
+    expect(drawImage).not.toHaveBeenCalled()
+
+    announcePendingFrame()
+    await expect(pending).resolves.toBe(DATA_URL)
+    expect(drawImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to animation frames when requestVideoFrameCallback is unavailable', async () => {
+    const { drawImage } = stubCaptureDom({ announceFrame: true, hasFrameCallback: false })
+
+    const frame = await createOnDemandCaptureSource({ settleMs: 0 }).captureFrame()
+
+    expect(frame).toBe(DATA_URL)
+    expect(drawImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('draws anyway when no frame is ever announced, rather than failing the capture', async () => {
+    vi.useFakeTimers()
+    const { drawImage } = stubCaptureDom({ announceFrame: false })
+
+    const pending = createOnDemandCaptureSource({ settleMs: 0 }).captureFrame()
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    expect(drawImage).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(2_000)
+
+    await expect(pending).resolves.toBe(DATA_URL)
+    expect(drawImage).toHaveBeenCalledTimes(1)
   })
 })

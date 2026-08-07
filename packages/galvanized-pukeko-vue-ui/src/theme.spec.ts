@@ -123,9 +123,15 @@ describe('theme: token contract present with DL-8 defaults', () => {
 })
 
 describe('theme: MIGRATED discovery (glob-based, not a hardcoded allowlist)', () => {
-  it('finds the four currently-tokenized SFCs by scanning for --pk-color- in <style>, not a fixed list', () => {
+  it('finds the currently-tokenized SFCs by scanning for --pk-color- in <style>, not a fixed list', () => {
     expect(Object.keys(MIGRATED).sort()).toEqual(
-      ['ChatInterface.vue', 'HeadlessChat.vue', 'ToolCallBadge.vue', 'ToolResultGeneric.vue'].sort(),
+      [
+        'CaptureImageResult.vue',
+        'ChatInterface.vue',
+        'HeadlessChat.vue',
+        'ToolCallBadge.vue',
+        'ToolResultGeneric.vue',
+      ].sort(),
     )
   })
 })
