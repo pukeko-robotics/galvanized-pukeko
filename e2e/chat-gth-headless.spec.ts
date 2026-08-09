@@ -88,27 +88,12 @@ test.describe('Chat Interface (Gaunt Sloth AG-UI, headless default, no ?ui)', ()
         await expect(badge.locator('.tool-call-body')).toContainText('image/jpeg');
     });
 
-    // BE-5 live render-proof for the SURVIVING headless path. The ADK
-    // `show_a2ui_surface` tool result now reaches the client as raw A2UI JSONL
-    // (was a Java Map.toString(), which parseA2UIJsonl choked on), so the surface
-    // renders in the headless panel (default a2uiTarget). The machine-checkable
-    // core of the fix is already proven without a live model:
-    //   - agent-adk AdkLocalAgentA2uiWireTest: the TOOL_CALL_RESULT frame carries
-    //     the raw JSONL (wire-level SSE capture);
+    // BE-5's A2UI render coverage is machine-checkable and lives outside this file:
+    //   - agent-adk AdkLocalAgentA2uiWireTest: the TOOL_CALL_RESULT frame carries the
+    //     raw A2UI JSONL (wire-level SSE capture, was a Java Map.toString());
     //   - vue-ui HeadlessChatA2UI.spec.ts: the headless client renders A2UI from a
     //     raw-JSONL tool result (component-level).
-    // The one seam only a live browser can exercise is CopilotKit HttpAgent mapping
-    // TOOL_CALL_RESULT.content → the `tool` message content the client reads. That
-    // needs the full stack (ADK server + web client + live Google model + browser),
-    // which does not boot in the worktree, so this is left `.fixme`: un-fixme and
-    // validate it against the live e2e stack post-merge (BE-5 attention item).
-    test.fixme('renders an A2UI surface in the headless panel (live render-proof)', async ({ page }) => {
-        const input = page.locator('[data-testid="pk-headless-input"]');
-        await input.click();
-        await input.fill('Show me a contact form with a name and an email field using the show_a2ui_surface tool');
-        await page.locator('[data-testid="pk-headless-send"]').click();
-
-        // The surface renders in the default (panel) A2UI target.
-        await expect(page.locator('.a2ui-surface')).toBeVisible({ timeout: 60000 });
-    });
+    // The remaining seam — CopilotKit HttpAgent projecting TOOL_CALL_RESULT.content
+    // into the `tool` message the client reads — is exercised only by a live browser
+    // against the full stack, and is deliberately not covered here (BE-8).
 });

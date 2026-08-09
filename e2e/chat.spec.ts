@@ -48,7 +48,8 @@ test.describe('Chat Interface', () => {
         await expect(page.getByText('Click Send or press Enter to send your message')).toBeVisible();
     });
 
-    // A2UI render coverage moved to the SURVIVING headless surface (chat-gth-headless.spec.ts, BE-5).
+    // A2UI render coverage lives in the machine-checkable specs — agent-adk AdkLocalAgentA2uiWireTest
+    // (wire level) and vue-ui HeadlessChatA2UI.spec.ts (component level).
     // The bespoke ChatInterface path this spec exercises is defaulted away by PLAT-12 and deleted by
     // PLAT-13, so a bespoke A2UI render test would assert on a doomed surface; the previously
     // quarantined `should render A2UI form` fixme was removed with the fix rather than un-skipped here.

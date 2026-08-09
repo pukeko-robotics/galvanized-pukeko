@@ -28,10 +28,7 @@ const JAVA_HOME = existsSync(JAVA_21) ? JAVA_21 : (process.env.JAVA_HOME || JAVA
 // flash alias — some AI-Studio keys 404 ("no longer available to new users") on pinned older flash
 // ids, while the `-latest` alias always resolves to a live model. Override with PUKEKO_AI_MODEL.
 // The demo's committed default (pukeko.ai.model=gemini-2.5-pro) is left untouched.
-// NOTE: the A2UI test (e2e/chat.spec.ts "should render A2UI form") is knocked out by a separate
-// pre-existing BE-1 bug (show_a2ui_surface tool RESULT is emitted as a Java Map.toString(), not the
-// surface JSONL the client's parseA2UIJsonl expects — see task-1-report.md), NOT by model choice; a
-// stronger model does not help. The three text/UI tests are green and prove the AG-UI wire.
+// The three text/UI tests in e2e/chat.spec.ts are green and prove the AG-UI wire.
 const PUKEKO_AI_MODEL = process.env.PUKEKO_AI_MODEL || 'gemini-flash-lite-latest';
 
 function startAdkAgent() {
