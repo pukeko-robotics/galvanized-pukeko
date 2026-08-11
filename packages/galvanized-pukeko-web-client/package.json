@@ -20,7 +20,7 @@
   "private": true,
   "description": "Thin host app that mounts @galvanized-pukeko/vue-ui — the dev server and the build embedded by the ADK agent.",
   "dependencies": {
-    "@copilotkit/vue": "^1.60.1",
+    "@copilotkit/vue": "^1.66.4",
     "@galvanized-pukeko/vue-ui": "workspace:*",
     "chart.js": "^4.5.1",
     "vue": "^3.5.12",

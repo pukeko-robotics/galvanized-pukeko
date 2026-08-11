@@ -66,7 +66,7 @@
     "vue": "^3.5.12"
   },
   "peerDependencies": {
-    "@copilotkit/vue": "^1.60.1",
+    "@copilotkit/vue": "^1.66.0",
     "vue": "^3.5.12"
   },
   "peerDependenciesMeta": {

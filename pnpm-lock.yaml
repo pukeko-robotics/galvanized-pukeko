@@ -118,8 +118,8 @@ importers:
         specifier: ^0.0.57
         version: 0.0.57
       '@copilotkit/vue':
-        specifier: ^1.60.1
-        version: 1.61.0(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
+        specifier: ^1.66.0
+        version: 1.66.4(lit@3.3.3)(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
       chart.js:
         specifier: ^4.5.1
         version: 4.5.1
@@ -149,8 +149,8 @@ importers:
   packages/galvanized-pukeko-web-client:
     dependencies:
       '@copilotkit/vue':
-        specifier: ^1.60.1
-        version: 1.61.0(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
+        specifier: ^1.66.4
+        version: 1.66.4(lit@3.3.3)(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
       '@galvanized-pukeko/vue-ui':
         specifier: workspace:*
         version: link:../galvanized-pukeko-vue-ui
@@ -181,8 +181,8 @@ packages:
       express:
         optional: true
 
-  '@a2ui/web_core@0.9.0':
-    resolution: {integrity: sha512-TsMWuEeuVDsScGIGPy/fWIZu+EOBRfhx6KwjKh3VwY1AwysRenQM8zDr8VrSk14Wck/aBgVxk2zWVrMCK2/s6A==}
+  '@a2ui/web_core@0.10.4':
+    resolution: {integrity: sha512-sahOUSKZIGv9ZtnHjfzWR8o/F1XfSTp4sQAX5/auSenQYBYDRaY0+vrZIkddc/IEzpXJob6cFJT2r5/mLzAvqg==}
 
   '@ag-ui/client@0.0.57':
     resolution: {integrity: sha512-Xap2alG9Z0/j5kb3x4D7oTpe2sw1dfrC9rgJJr2NZu5vKcm8dzIPNd31mF2B4zS3BKqYIu245yxKPhEtT30MHw==}
@@ -359,26 +359,32 @@ packages:
   '@chevrotain/types@11.1.2':
     resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
 
-  '@copilotkit/core@1.61.0':
-    resolution: {integrity: sha512-SeT3tEPrE7eWw/qMA6o5qgADZgpADHw/X4xBYqJuMDBF7uUyeI9II0tFno8FkgIsSW7RK8KbYqOoOxRFdm8gOg==}
+  '@copilotkit/core@1.66.4':
+    resolution: {integrity: sha512-xC0TfEaaWEZMHMSg3sTE5xZYEJO9m+hu6qwSQkpHooTABl9fA26wKuAXsjDDwE78i0jqDRg/O8xtVDPShK/Vrg==}
     engines: {node: '>=18'}
 
   '@copilotkit/license-verifier@0.5.0':
     resolution: {integrity: sha512-vrwKtIpYwF0FT9ZoYASH8owa2cGV0dhDvJGaCRaRMStwDxpc6DRdydKkhx8cWZXyBRxEYcq/Vygv4JvevhQQdQ==}
 
-  '@copilotkit/shared@1.61.0':
-    resolution: {integrity: sha512-7YZn6z64d9kr+ENvCsNSEXV2w4ITnETgoW5l1X1jr1U0G0VWD5Qb72+6IXR4zOYjHIKfpY7qABEcODJ6qmvEMA==}
+  '@copilotkit/shared@1.66.4':
+    resolution: {integrity: sha512-Hy7a8Zgzrt8hfYj31bHOjba0DCJTFm+yBp2izvaYRnVkTVH8zleYgwo6/wCpGQjLswLsSOlgu8nUhenHxvI4vg==}
     peerDependencies:
       '@ag-ui/core': '>=0.0.48'
 
-  '@copilotkit/vue@1.61.0':
-    resolution: {integrity: sha512-W1x1GdSx7pesVtCSuR5IekekszcX9C+ic+s7Yx/vh8JvCa9GcK15tGFGCOmL+3dcgdxWUnw+nymOUrqDfsPdeg==}
+  '@copilotkit/vue@1.66.4':
+    resolution: {integrity: sha512-NMWHrKqGEtbBNBVWUC22LQi43bSAJTdGM0Soxrr8PrXyqKhk/8MSNxpfYUNm7TJ3PJIXQxAS35ix1zXK0FBq6A==}
     engines: {node: '>=18'}
     peerDependencies:
       vue: '>=3.3.0'
 
-  '@copilotkit/web-inspector@1.61.0':
-    resolution: {integrity: sha512-wJA7aVEMGjvYaPtPuyFWF9yJF3zsPh/EQPkcVoXlSqn6eyiq6rRCuaaacAdYLZSqMXCqS11zUm6u2fmxxIWQDA==}
+  '@copilotkit/web-components@1.66.4':
+    resolution: {integrity: sha512-Tm1N8QnQoYWM7uLWzixulvEkWayPek4J+oEi6FMkOt9GCEh1qwZ0bgDxbO9VZK+Y0UD8JDu61yxKGKFrI+H4+g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      lit: ^3.3.2
+
+  '@copilotkit/web-inspector@1.66.4':
+    resolution: {integrity: sha512-LC8XQzzKBjeGNm9LG4ThARp83yd32i7tGOKdAt0UBDsgsvBIgj8/PvA8PSSkx5hPaPn0IRk4yX18kWp4zLMLPw==}
     engines: {node: '>=18'}
 
   '@csstools/color-helpers@5.1.0':
@@ -3607,7 +3613,7 @@ snapshots:
       '@bufbuild/protobuf': 2.12.0
       express: 5.2.1
 
-  '@a2ui/web_core@0.9.0':
+  '@a2ui/web_core@0.10.4':
     dependencies:
       '@preact/signals-core': 1.14.3
       date-fns: 4.4.0
@@ -3858,10 +3864,10 @@ snapshots:
 
   '@chevrotain/types@11.1.2': {}
 
-  '@copilotkit/core@1.61.0(@ag-ui/core@0.0.57)(zod@3.25.76)':
+  '@copilotkit/core@1.66.4(@ag-ui/core@0.0.57)(zod@3.25.76)':
     dependencies:
       '@ag-ui/client': 0.0.57
-      '@copilotkit/shared': 1.61.0(@ag-ui/core@0.0.57)
+      '@copilotkit/shared': 1.66.4(@ag-ui/core@0.0.57)
       '@tanstack/pacer': 0.20.1
       phoenix: 1.8.8
       rxjs: 7.8.1
@@ -3873,7 +3879,7 @@ snapshots:
 
   '@copilotkit/license-verifier@0.5.0': {}
 
-  '@copilotkit/shared@1.61.0(@ag-ui/core@0.0.57)':
+  '@copilotkit/shared@1.66.4(@ag-ui/core@0.0.57)':
     dependencies:
       '@ag-ui/client': 0.0.57
       '@ag-ui/core': 0.0.57
@@ -3889,14 +3895,15 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  '@copilotkit/vue@1.61.0(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))':
+  '@copilotkit/vue@1.66.4(lit@3.3.3)(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))':
     dependencies:
-      '@a2ui/web_core': 0.9.0
+      '@a2ui/web_core': 0.10.4
       '@ag-ui/client': 0.0.57
       '@ag-ui/core': 0.0.57
-      '@copilotkit/core': 1.61.0(@ag-ui/core@0.0.57)(zod@3.25.76)
-      '@copilotkit/shared': 1.61.0(@ag-ui/core@0.0.57)
-      '@copilotkit/web-inspector': 1.61.0(@ag-ui/core@0.0.57)(zod@3.25.76)
+      '@copilotkit/core': 1.66.4(@ag-ui/core@0.0.57)(zod@3.25.76)
+      '@copilotkit/shared': 1.66.4(@ag-ui/core@0.0.57)
+      '@copilotkit/web-components': 1.66.4(lit@3.3.3)
+      '@copilotkit/web-inspector': 1.66.4(@ag-ui/core@0.0.57)(zod@3.25.76)
       '@jetbrains/websandbox': 1.2.1
       katex: 0.16.47
       lucide-vue-next: 0.525.0(vue@3.5.38(typescript@5.9.3))
@@ -3906,13 +3913,18 @@ snapshots:
       zod-to-json-schema: 3.25.2(zod@3.25.76)
     transitivePeerDependencies:
       - encoding
+      - lit
       - supports-color
       - typescript
 
-  '@copilotkit/web-inspector@1.61.0(@ag-ui/core@0.0.57)(zod@3.25.76)':
+  '@copilotkit/web-components@1.66.4(lit@3.3.3)':
+    dependencies:
+      lit: 3.3.3
+
+  '@copilotkit/web-inspector@1.66.4(@ag-ui/core@0.0.57)(zod@3.25.76)':
     dependencies:
       '@ag-ui/client': 0.0.57
-      '@copilotkit/core': 1.61.0(@ag-ui/core@0.0.57)(zod@3.25.76)
+      '@copilotkit/core': 1.66.4(@ag-ui/core@0.0.57)(zod@3.25.76)
       lit: 3.3.3
       lucide: 0.525.0
       marked: 12.0.2
