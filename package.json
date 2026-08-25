@@ -16,7 +16,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "build": "pnpm -r run build",
-    "lint": "oxlint --ignore-path .gitignore --ignore-pattern 'packages/galvanized-pukeko-agent-adk/src/main/resources/browser/**' --import-plugin -D correctness -D import/named .",
+    "lint": "oxlint --ignore-path .gitignore --ignore-pattern 'packages/galvanized-pukeko-agent-adk/src/main/resources/browser/**' -D correctness .",
     "test": "pnpm run lint && pnpm -r run test",
     "web": "pnpm --filter @galvanized-pukeko/web-client run dev",
     "web-ag-ui": "AGUI_URL=http://localhost:3000/agents/default/run pnpm --filter @galvanized-pukeko/web-client run dev",
