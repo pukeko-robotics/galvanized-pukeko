@@ -62,10 +62,12 @@ on:
         default: ''
 
 jobs:
-  # Gate 1 — mirror of the repo's Tests-and-Lint job. No root `lint` script exists
-  # in galvanized (lint is per-package via oxlint/eslint), so only `pnpm test` runs.
+  # Gate 1 — mirror of the repo's Tests-and-Lint job. `pnpm test` runs the root
+  # `lint` script first — a repository-scoped oxlint pass that also covers the
+  # root-level harnesses, e2e/ and scripts/, which no workspace-scoped script
+  # reaches — and then the workspace unit suites.
   unit-tests:
-    name: Unit tests
+    name: Lint and unit tests
     runs-on: ubuntu-latest
     permissions:
       contents: read

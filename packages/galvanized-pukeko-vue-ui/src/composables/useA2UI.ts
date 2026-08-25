@@ -4,12 +4,6 @@ import type { ChatCallbacks } from '../services/chatService'
 
 // --- Inline simplified A2UI types (no external deps) ---
 
-interface StringValue {
-  path?: string
-  literalString?: string
-  literal?: string
-}
-
 interface Action {
   name: string
   context?: Array<{
