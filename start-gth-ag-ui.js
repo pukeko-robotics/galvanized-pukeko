@@ -3,13 +3,19 @@ import { spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Resolve the AG-UI server binary from this repo's own install, before anything
+// is started, so a missing dependency aborts while there is still nothing to
+// tear down. Never a bare name: see scripts/local-bin.mjs for why.
+const GTH_API_BIN = resolveLocalBinOrExit('@gaunt-sloth/agent', 'gaunt-sloth-api', __dirname);
+
 // OPS-8: load the worktree-root `.env`. GTH_AGUI_PORT drives the gaunt-sloth AG-UI
-// server + the web client's AGUI_URL target; WEB_PORT drives vite. galvanized's
-// `.env` carries WEB_PORT but not GTH_AGUI_PORT today (falls back to 3000) —
-// flagged to the coordinator. Inline env vars still win.
+// server + the web client's AGUI_URL target; WEB_PORT drives vite. Both are written
+// per worktree by the allocator; the fallbacks below are the trunk defaults for a
+// checkout with no `.env`. Inline env vars still win.
 try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
 const GTH_AGUI_PORT = process.env.GTH_AGUI_PORT || '3000';
 const WEB_PORT = process.env.WEB_PORT || '5555';
@@ -32,10 +38,9 @@ function startGthAgUi() {
   console.log([`╔${bar}╗`, ...bannerLines.map(pad), `╚${bar}╝`].join('\n'));
 
   const logStream = createWriteStream(logPath, { flags: 'w' });
-  const proc = spawn(
-    'npx',
+  const proc = spawnLocalBin(
+    GTH_API_BIN,
     [
-      'gaunt-sloth-api',
       'ag-ui',
       '--port', GTH_AGUI_PORT,
       '--config', resolve(__dirname, 'examples/pukeko-gaunt-sloth-ag-ui/.gsloth.config.json'),

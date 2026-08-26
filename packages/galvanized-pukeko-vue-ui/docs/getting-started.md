@@ -38,10 +38,14 @@ createApp(CoreApp).mount('#app')
 { "agUiUrl": "http://localhost:3000/agents/default/run", "appName": "Demo" }
 ```
 
-Run an AG-UI server and your dev server:
+Run an AG-UI server and your dev server. Any AG-UI server works; Gaunt Sloth is one.
+Install it as a dependency and run its binary from your own `node_modules`, rather
+than through a one-shot package runner — given a name that does not resolve locally,
+those fetch and execute whatever the public registry serves under it:
 
 ```bash
-npx gaunt-sloth-api ag-ui --port 3000     # any AG-UI server works
+npm install --save-dev @gaunt-sloth/agent
+node_modules/.bin/gaunt-sloth-api ag-ui --port 3000
 vite                                       # serves the SPA above
 ```
 

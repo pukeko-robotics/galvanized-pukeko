@@ -4,8 +4,15 @@ import { createInterface } from 'readline';
 import { createWriteStream, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Resolve Playwright from this repo's own install, before anything is started. It
+// is not needed until the end of the run, but a missing dependency must abort while
+// there is still nothing to tear down — failing after the ADK agent and the web
+// client are up leaks them. Never a bare name: see scripts/local-bin.mjs.
+const PLAYWRIGHT_BIN = resolveLocalBinOrExit('@playwright/test', 'playwright', __dirname);
 
 // OPS-8: load the worktree-root `.env` so a shifted allocation moves the web +
 // ADK ports (and the ADK CORS origin list) together. Inline env vars still win.
@@ -132,7 +139,7 @@ try {
 
   console.log('\nRunning integration tests...');
   exitCode = await new Promise(resolve => {
-    const testProc = spawn('npx', ['playwright', 'test', 'e2e/chat.spec.ts', ...playwrightArgs], { cwd: __dirname, stdio: 'inherit' });
+    const testProc = spawnLocalBin(PLAYWRIGHT_BIN, ['test', 'e2e/chat.spec.ts', ...playwrightArgs], { cwd: __dirname, stdio: 'inherit' });
     testProc.on('close', resolve);
     testProc.on('error', err => { console.error(`Playwright: ${err.message}`); resolve(1); });
   });

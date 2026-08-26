@@ -9,8 +9,16 @@ import { createInterface } from 'readline';
 import { createWriteStream, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Resolve Playwright from this repo's own install, before anything is started. It
+// is not needed until the end of the run, but a missing dependency must abort while
+// there is still nothing to tear down — failing after the Koog server and the web
+// client are up leaks them. Resolution is anchored to this repo root, so the run
+// below can keep its own cwd (Playwright discovers its config from there).
+const PLAYWRIGHT_BIN = resolveLocalBinOrExit('@playwright/test', 'playwright', __dirname);
 
 const KOOG_EXAMPLE_DIR = resolve(__dirname, 'examples/pukeko-koog-ag-ui');
 const KOOG_AGENT_DIR = resolve(KOOG_EXAMPLE_DIR, 'koog-agent');
@@ -129,7 +137,7 @@ try {
 
   console.log('\nRunning integration tests...');
   exitCode = await new Promise(res => {
-    const testProc = spawn('npx', ['playwright', 'test', ...playwrightArgs], {
+    const testProc = spawnLocalBin(PLAYWRIGHT_BIN, ['test', ...playwrightArgs], {
       cwd: KOOG_EXAMPLE_DIR,
       stdio: 'inherit',
     });

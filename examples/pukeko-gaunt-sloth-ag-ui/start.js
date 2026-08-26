@@ -1,10 +1,17 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { resolveLocalBinOrExit, spawnLocalBin } from '../../scripts/local-bin.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, '..', '..');
+
+// This example directory has no package.json of its own; its dependencies are the
+// repository's. Resolve from ROOT explicitly rather than leaning on the working
+// directory, and do it before anything is started so a missing dependency aborts
+// with nothing to tear down. Never a bare name: see scripts/local-bin.mjs.
+const GTH_API_BIN = resolveLocalBinOrExit('@gaunt-sloth/agent', 'gaunt-sloth-api', ROOT);
 
 const AGUI_PORT = 3000;
 const WEB_PORT = 5555;
@@ -47,10 +54,9 @@ async function waitForReady(url, label) {
 
 // Start Gaunt Sloth AG-UI server
 console.log(`Starting Gaunt Sloth AG-UI server on port ${AGUI_PORT}...`);
-const gthProc = spawn(
-  'npx',
+const gthProc = spawnLocalBin(
+  GTH_API_BIN,
   [
-    'gaunt-sloth-api',
     'ag-ui',
     '--port', String(AGUI_PORT),
     '--config', resolve(__dirname, '.gsloth.config.json'),

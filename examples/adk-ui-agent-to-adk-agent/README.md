@@ -66,8 +66,11 @@ curl 'http://localhost:8080/run_sse' \
 
 ## Running Tests
 
+This example has no `node_modules` of its own; Playwright comes from the repository
+root. Run its installed binary directly, from this directory:
+
 ```bash
-npx playwright test -c playwright.config.ts
+../../node_modules/.bin/playwright test -c playwright.config.ts
 ```
 
 ## How It Works

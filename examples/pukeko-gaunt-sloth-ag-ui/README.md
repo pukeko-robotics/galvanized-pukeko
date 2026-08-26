@@ -28,8 +28,12 @@ Press `Ctrl+C` to stop all services.
 Start each service in separate terminals:
 
 **Terminal 1 — Gaunt Sloth AG-UI server:**
+
+This example has no `node_modules` of its own; Gaunt Sloth comes from the repository
+root. Run its installed binary directly, from this directory:
+
 ```bash
-npx gaunt-sloth-api ag-ui
+../../node_modules/.bin/gaunt-sloth-api ag-ui
 ```
 
 **Terminal 2 — Web client (with AG-UI URL):**

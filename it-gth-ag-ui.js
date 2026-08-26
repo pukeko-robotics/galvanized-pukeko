@@ -3,14 +3,21 @@ import { spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Resolve both binaries from this repo's own install, before anything is started.
+// Playwright is not needed until the end of the run, but a missing dependency must
+// abort while there is still nothing to tear down — failing after two detached
+// process groups are up leaks them. Never a bare name: see scripts/local-bin.mjs.
+const GTH_API_BIN = resolveLocalBinOrExit('@gaunt-sloth/agent', 'gaunt-sloth-api', __dirname);
+const PLAYWRIGHT_BIN = resolveLocalBinOrExit('@playwright/test', 'playwright', __dirname);
+
 // OPS-8: load the worktree-root `.env`. GTH_AGUI_PORT drives the gaunt-sloth AG-UI
 // server + the web client's AGUI_URL target; WEB_PORT drives the vite dev server.
-// NOTE: at time of writing galvanized's generated `.env` carries WEB_PORT but not
-// GTH_AGUI_PORT (that var lives in gaunt-sloth's `.env`), so this falls back to
-// 3000 today — flagged to the coordinator. Inline env vars still win.
+// Both are written per worktree by the allocator; the fallbacks below are the trunk
+// defaults for a checkout with no `.env`. Inline env vars still win.
 try { process.loadEnvFile(resolve(__dirname, '.env')); } catch { /* no .env: defaults */ }
 const GTH_AGUI_PORT = process.env.GTH_AGUI_PORT || '3000';
 const WEB_PORT = process.env.WEB_PORT || '5555';
@@ -33,10 +40,9 @@ function startGthAgUi() {
   console.log([`╔${bar}╗`, ...bannerLines.map(pad), `╚${bar}╝`].join('\n'));
 
   const logStream = createWriteStream(logPath, { flags: 'w' });
-  const proc = spawn(
-    'npx',
+  const proc = spawnLocalBin(
+    GTH_API_BIN,
     [
-      'gaunt-sloth-api',
       'ag-ui',
       '--port', GTH_AGUI_PORT,
       '--config', resolve(__dirname, 'examples/pukeko-gaunt-sloth-ag-ui/.gsloth.config.json'),
@@ -113,10 +119,9 @@ try {
 
   console.log('\nRunning integration tests...');
   exitCode = await new Promise(resolve => {
-    const testProc = spawn(
-      'npx',
+    const testProc = spawnLocalBin(
+      PLAYWRIGHT_BIN,
       [
-        'playwright',
         'test',
         // Bespoke UI + the two CopilotKit modes (P2b: stock + headless), all
         // against the same live Gaunt Sloth AG-UI backend.

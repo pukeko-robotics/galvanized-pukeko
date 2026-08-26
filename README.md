@@ -113,7 +113,10 @@ pnpm run it-gth-ag-ui   # Gaunt Sloth backend
 pnpm run it-adk         # ADK backend (add it-adk-headed for a visible browser)
 ```
 
-If Playwright reports the browser is missing, run `npx playwright install`.
+If Playwright reports the browser is missing, run `node_modules/.bin/playwright install`
+from the repository root. Use the installed binary rather than a one-shot package
+runner: given a name that does not resolve locally, those fetch and execute whatever
+the public registry serves under it.
 
 ## Contributing
 
