@@ -75,8 +75,10 @@ function killGroup(proc) {
 const { proc: adkProc, ready: adkReady } = startAdkAgent();
 
 console.log('Starting Web Client...');
-const webProc = spawn('npm', ['run', 'dev'], {
-  cwd: resolve(__dirname, 'packages/galvanized-pukeko-web-client'),
+// pnpm, not npm: the web client is a pnpm-workspace package (its deps live in the workspace store,
+// not a local node_modules `npm run` can resolve). Mirrors the start.js npm->pnpm fix (1e5db05).
+const webProc = spawn('pnpm', ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'], {
+  cwd: __dirname,
   stdio: 'inherit',
   detached: true,
 });
