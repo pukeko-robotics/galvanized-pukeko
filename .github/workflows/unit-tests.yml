@@ -39,6 +39,15 @@ name: Unit tests
 #     error while the tick beside it stays green. Only web-client source sits
 #     behind a type-check that can actually fail the job; vue-ui has no
 #     `type-check` script, and its tsconfig only emits declarations.
+#   - The root-level files are not type-checked either, and not even partially.
+#     `pnpm -r run build` visits the workspace packages, and every tsconfig
+#     project in this repository lives inside one of those two packages — there
+#     is no tsconfig at the root. So it-adk.js, it-koog.js, it-gth-ag-ui.js, the
+#     start-*.js launchers, playwright.config.ts, e2e/*.spec.ts and scripts/*.mjs
+#     belong to no type-check project, the TypeScript ones included. Only the
+#     oxlint pass above looks at them at all. This is the same gap
+#     pukeko-robot-controller closed for itself with tsconfig.tooling.json
+#     (OPS-75); nothing equivalent exists here yet.
 #   - No end-to-end tests. The Koog and ADK Playwright suites are gate 2 of
 #     release.yml and stay commented out there.
 #   - No Java or Kotlin. The agent-adk package is outside the pnpm workspace, so
