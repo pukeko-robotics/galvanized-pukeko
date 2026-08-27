@@ -75,8 +75,10 @@ function killGroup(proc) {
 const { proc: adkProc, ready: adkReady } = startAdkAgent();
 
 console.log('Starting Web Client...');
-const webProc = spawn('npm', ['run', 'dev'], {
-  cwd: resolve(__dirname, 'packages/galvanized-pukeko-web-client'),
+// pnpm, not npm: the web client's dev script needs vite, which only the workspace root declares.
+// A bare `npm run` finds it by searching ancestor node_modules; --filter does not depend on that.
+const webProc = spawn('pnpm', ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'], {
+  cwd: __dirname,
   stdio: 'inherit',
   detached: true,
 });

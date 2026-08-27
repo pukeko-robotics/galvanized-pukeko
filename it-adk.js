@@ -112,8 +112,8 @@ const playwrightArgs = process.argv.slice(2);
 const { proc: adkProc, ready: adkReady } = startAdkAgent();
 
 console.log('Starting Web Client...');
-// pnpm, not npm: the web client is a pnpm-workspace package (its deps live in the workspace store,
-// not a local node_modules `npm run` can resolve). Mirrors the start.js npm->pnpm fix (1e5db05).
+// pnpm, not npm: the web client's dev script needs vite, which only the workspace root declares.
+// A bare `npm run` finds it by searching ancestor node_modules; --filter does not depend on that.
 const webProc = spawn('pnpm', ['--filter', '@galvanized-pukeko/web-client', 'run', 'dev'], {
   cwd: __dirname,
   stdio: 'inherit',
