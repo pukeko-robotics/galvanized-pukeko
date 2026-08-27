@@ -11,10 +11,43 @@ name: Unit tests
 #      reaches
 #   3. pnpm -r run test — the workspace unit suites (vue-ui + web-client)
 #
+# OPS-85 then runs `pnpm run build`. That is `pnpm -r run build`, and web-client's
+# own build is `pnpm run type-check && pnpm run build-only`, so the root build
+# SUBSUMES web-client's vue-tsc pass. Running `type-check` as a separate step here
+# would be a second name for work this step already does, and a reader seeing both
+# listed would reasonably assume they covered different things.
+#
+# WHY THE SAME JOB, NOT A PARALLEL ONE. A parallel job is a second independently
+# named check, and each name has to be added to branch protection separately —
+# operational cost paid by a human, for no extra coverage. The price of a single
+# job is fail-fast: a lint failure masks a type error until it is fixed. That is
+# acceptable for a gate whose purpose is to stop the merge either way.
+#
+# The build runs AFTER `pnpm test`, because the QA-19 guard is the first link of
+# that chained command and must stay the first thing this job runs — a job that
+# type-checks before it checks for one-shot package runners has put the cheap
+# convenience ahead of the reason the trigger exists. Splitting the guard out to
+# reorder would fork the exact command release.yml depends on.
+#
 # WHAT THIS CHECK DOES NOT COVER. A green tick here is narrower than "CI passed",
 # and the point of this workflow is undone if anyone reads it as more:
-#   - No build. `pnpm run build` and vue-tsc are not run, so a type error or a
-#     broken bundle can land with this check green.
+#   - A type error in vue-ui source does not fail this check, and this is the
+#     sharp edge rather than a simple gap. vue-ui's build is `vite build` twice
+#     and its declarations come from unplugin-dts, which REPORTS such an error —
+#     a real `error TS2322` is printed in this job's log — and then exits 0
+#     anyway. Measured, not inferred. So the build log can name a vue-ui type
+#     error while the tick beside it stays green. Only web-client source sits
+#     behind a type-check that can actually fail the job; vue-ui has no
+#     `type-check` script, and its tsconfig only emits declarations.
+#   - The root-level files are not type-checked either, and not even partially.
+#     `pnpm -r run build` visits the workspace packages, and every tsconfig
+#     project in this repository lives inside one of those two packages — there
+#     is no tsconfig at the root. So it-adk.js, it-koog.js, it-gth-ag-ui.js, the
+#     start-*.js launchers, playwright.config.ts, e2e/*.spec.ts and scripts/*.mjs
+#     belong to no type-check project, the TypeScript ones included. Only the
+#     oxlint pass above looks at them at all. This is the same gap
+#     pukeko-robot-controller closed for itself with tsconfig.tooling.json
+#     (OPS-75); nothing equivalent exists here yet.
 #   - No end-to-end tests. The Koog and ADK Playwright suites are gate 2 of
 #     release.yml and stay commented out there.
 #   - No Java or Kotlin. The agent-adk package is outside the pnpm workspace, so
@@ -60,3 +93,5 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run Tests
         run: pnpm test
+      - name: Build
+        run: pnpm run build
