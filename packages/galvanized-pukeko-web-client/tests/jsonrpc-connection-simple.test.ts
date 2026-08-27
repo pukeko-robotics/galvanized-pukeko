@@ -1,12 +1,49 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+/**
+ * Minimal JSON-RPC 2.0 message shapes. These cases pin the wire format itself
+ * rather than any exported helper, so the shapes are declared here.
+ *
+ * The member a variant must NOT carry is typed as optional-`undefined` rather
+ * than left out: each case asserts the absence (a notification has no `id`, a
+ * success response no `error`, an error response no `result`), and reading a
+ * property that the type omits altogether is not expressible.
+ */
+interface JsonRpcRequest {
+  jsonrpc: '2.0';
+  method: string;
+  params?: unknown;
+  id: number | string;
+}
+
+interface JsonRpcNotification {
+  jsonrpc: '2.0';
+  method: string;
+  params?: unknown;
+  id?: undefined;
+}
+
+interface JsonRpcSuccessResponse {
+  jsonrpc: '2.0';
+  result: unknown;
+  error?: undefined;
+  id: number | string;
+}
+
+interface JsonRpcErrorResponse {
+  jsonrpc: '2.0';
+  error: { code: number; message: string };
+  result?: undefined;
+  id: number | string;
+}
+
 describe('ConnectionService JSON-RPC Core Functionality', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
   it('should create correct JSON-RPC request format', () => {
-    const request = {
+    const request: JsonRpcRequest = {
       jsonrpc: '2.0' as const,
       method: 'test_method',
       params: { param: 'value' },
@@ -20,7 +57,7 @@ describe('ConnectionService JSON-RPC Core Functionality', () => {
   });
 
   it('should create correct JSON-RPC notification format', () => {
-    const notification = {
+    const notification: JsonRpcNotification = {
       jsonrpc: '2.0' as const,
       method: 'notify_method',
       params: { data: 'test' }
@@ -33,7 +70,7 @@ describe('ConnectionService JSON-RPC Core Functionality', () => {
   });
 
   it('should create correct JSON-RPC response format', () => {
-    const response = {
+    const response: JsonRpcSuccessResponse = {
       jsonrpc: '2.0' as const,
       result: { success: true },
       id: 1
@@ -46,7 +83,7 @@ describe('ConnectionService JSON-RPC Core Functionality', () => {
   });
 
   it('should create correct JSON-RPC error response format', () => {
-    const errorResponse = {
+    const errorResponse: JsonRpcErrorResponse = {
       jsonrpc: '2.0' as const,
       error: {
         code: -32601,

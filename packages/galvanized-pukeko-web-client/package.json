@@ -13,7 +13,7 @@
     "lint:oxlint": "oxlint . --fix -D correctness --ignore-path .gitignore",
     "lint:eslint": "eslint . --fix",
     "lint": "oxlint . --fix -D correctness --ignore-path .gitignore && eslint . --fix",
-    "format": "prettier --write packages/web/src/"
+    "format": "prettier --write src/"
   },
   "author": "Andrew Kondratev",
   "license": "MIT",
