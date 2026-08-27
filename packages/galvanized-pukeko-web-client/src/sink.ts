@@ -12,8 +12,8 @@
  * being a bundle input; only the latter is what "build target" means here.
  *
  * If the sink is ever wanted in a deployed build, that is a deliberate change:
- * add it to `build.rollupOptions.input` in `vite.config.ts`. Do not assume it
- * ships today.
+ * add it as an additional input under `build.rolldownOptions` in
+ * `vite.config.ts`. Do not assume it ships today.
  */
 import { createApp } from 'vue'
 import KitchenSink from './KitchenSink.vue'
