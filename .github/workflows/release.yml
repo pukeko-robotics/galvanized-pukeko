@@ -62,31 +62,15 @@ on:
         default: ''
 
 jobs:
-  # Gate 1 — mirror of the repo's Tests-and-Lint job. `pnpm test` runs the root
-  # `lint` script first — a repository-scoped oxlint pass that also covers the
-  # root-level harnesses, e2e/ and scripts/, which no workspace-scoped script
-  # reaches — and then the workspace unit suites.
+  # Gate 1 — the same job the push and pull_request paths run, called rather than
+  # copied, so the release pipeline and the ordinary path can never test different
+  # things. `pnpm test` runs the one-shot-package-runner guard first, then the
+  # repository-scoped oxlint pass, then the workspace unit suites; unit-tests.yml
+  # documents the chain and what it does not cover.
   unit-tests:
-    name: Lint and unit tests
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/unit-tests.yml
     permissions:
       contents: read
-    strategy:
-      matrix:
-        node-version: [24.x]
-    steps:
-      - uses: actions/checkout@v6
-      - name: Enable Corepack
-        run: corepack enable
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Run Tests
-        run: pnpm test
 
   # # Gate 2 — the Koog + ADK Playwright end-to-end tests against Google AI Studio.
   # # galvanized consumes @gaunt-sloth/* from npm (not file:), so NO gaunt-sloth

@@ -1,0 +1,62 @@
+name: Unit tests
+
+# OPS-74: the ordinary-path gate. Runs `pnpm test` on every push and every pull
+# request, and is also the reusable body that release.yml calls as its gate 1, so
+# the release pipeline and the push path can never test different things.
+#
+# `pnpm test` here is three chained steps, in this order:
+#   1. scripts/check-no-bare-launchers.mjs — the QA-19 one-shot-package-runner guard
+#   2. pnpm run lint  — the OPS-52 repository-scoped oxlint pass, which also covers
+#      the root-level harnesses, e2e/ and scripts/ that no workspace-scoped script
+#      reaches
+#   3. pnpm -r run test — the workspace unit suites (vue-ui + web-client)
+#
+# WHAT THIS CHECK DOES NOT COVER. A green tick here is narrower than "CI passed",
+# and the point of this workflow is undone if anyone reads it as more:
+#   - No build. `pnpm run build` and vue-tsc are not run, so a type error or a
+#     broken bundle can land with this check green.
+#   - No end-to-end tests. The Koog and ADK Playwright suites are gate 2 of
+#     release.yml and stay commented out there.
+#   - No Java or Kotlin. The agent-adk package is outside the pnpm workspace, so
+#     `pnpm -r run test` never reaches it; only the oxlint pass looks at that tree
+#     at all, and only at its non-Java files.
+#
+# WHY THE E2E HALF IS NOT ON THIS TRIGGER. It is not merely that a booted stack is
+# expensive. A pull request from a fork gets a read-only token and no repository
+# secrets, and the e2e suites need GOOGLE_API_KEY, so on the pull_request trigger
+# they could not authenticate at all and would fail for a reason that says nothing
+# about the change. They belong on a deliberate trigger with access to secrets:
+# gate 2 of release.yml, to be uncommented once the key and the Maven Central
+# kotlin-core dependency named in release.yml's header are in place.
+#
+# `push` is deliberately unfiltered, matching lockfile-guard.yml. A same-repo pull
+# request therefore runs this twice, once for each trigger; that is the existing
+# repository convention and the cost is one short job.
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+jobs:
+  unit-tests:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        node-version: [24.x]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run Tests
+        run: pnpm test
