@@ -22,15 +22,22 @@
  * `useFrontendTool` / `use-interrupt` is increment 3 (headless). See
  * briefs/copilotkit-vue/PLAN.md.
  */
-import { h, markRaw, reactive } from 'vue'
+import { h, markRaw, reactive, type Raw } from 'vue'
 import { useRenderTool } from '@copilotkit/vue/v2'
 import { z } from 'zod'
 import { useA2UI, A2UISurface, parseA2UIJsonl } from '@galvanized-pukeko/vue-ui'
 
 // One A2UI processor instance per tool call id, so multiple/repeated surfaces
 // in a single thread stay isolated. `reactive` so newly added entries render.
+//
+// The value type is `Raw<…>` because every instance goes in through `markRaw`.
+// A reactive Map deep-unwraps refs in its VALUE type, which would describe
+// `surfaces` as a plain `Map` — but `markRaw` means Vue never converts these
+// objects, so at runtime `surfaces` stays a real ref and callers must read
+// `.value`. `Raw<…>` is the marker that `UnwrapRefSimple` bails out on, so the
+// declared type says what is actually stored and read back here.
 const instances = reactive(
-  new Map<string, ReturnType<typeof useA2UI>>(),
+  new Map<string, Raw<ReturnType<typeof useA2UI>>>(),
 )
 
 function ingest(toolCallId: string, result: string): ReturnType<typeof useA2UI> {
@@ -51,7 +58,12 @@ function ingest(toolCallId: string, result: string): ReturnType<typeof useA2UI> 
 useRenderTool({
   name: 'show_a2ui_surface',
   parameters: z.object({}).passthrough(),
-  render: (props) => {
+  // `render`'s contextual type is a union of two call signatures (a render
+  // function or a Component), so TypeScript cannot pick one to infer the
+  // parameter from and it would land as an implicit `any`. Annotate the fields
+  // this renderer actually reads, the way `A2UIRenderToolBridge.vue` does in
+  // the vue-ui package.
+  render: (props: { toolCallId: string; status: string; result?: string }) => {
     if (props.status !== 'complete' || !props.result) {
       return h(
         'div',

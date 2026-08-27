@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.app.json",
   "include": [
-    "packages/web/src/**/__tests__/*",
+    "./tests/**/*",
     "./env.d.ts"
   ],
   "exclude": [],
