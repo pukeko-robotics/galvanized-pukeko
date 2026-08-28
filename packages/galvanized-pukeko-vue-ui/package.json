@@ -55,7 +55,8 @@
   ],
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build && vite build --config vite.copilot.config.ts",
+    "type-check": "vue-tsc -p tsconfig.json --noEmit",
+    "build": "pnpm run type-check && vite build && vite build --config vite.copilot.config.ts",
     "test": "vitest run",
     "test:visual": "playwright test",
     "preview": "vite preview"

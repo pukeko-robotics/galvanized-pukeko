@@ -1,0 +1,64 @@
+{
+  // OPS-87 — the repository-root files, which until now belonged to no
+  // type-check project at all.
+  //
+  // Every other tsconfig here lives inside one of the two workspace packages:
+  // vue-ui's covers `src/`, and web-client's solution covers `src/`, `tests/`
+  // and its own config files. `pnpm -r run build` visits only those packages,
+  // so the Playwright config, the end-to-end specs, the integration harnesses,
+  // the launchers and the scripts directory sat outside every one of them — the
+  // TypeScript ones included. A broken relative path, a renamed export or a
+  // syntax error in any of them survived the whole gate and surfaced only the
+  // next time a human ran the file by hand.
+  //
+  // This project is run by the root `type-check` script, which the root `build`
+  // script invokes first — so it rides the workflow's existing Build step and
+  // adds no new required-check name for branch protection to learn.
+  //
+  // This is the same gap pukeko-robot-controller closed with its own
+  // tsconfig.tooling.json (OPS-75), and deliberately the same shape. It differs
+  // in one respect: the `include` patterns are globs rather than a hand-listed
+  // set of filenames, so the next `it-*.js` harness or `start-*.js` launcher is
+  // covered on the day it is added rather than on the day someone remembers to
+  // extend this list.
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "include": [
+    "playwright.config.ts",
+    "e2e/**/*",
+    "scripts/**/*",
+    "it-*.js",
+    "start-*.js"
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+
+    // These run under node or a bundler, not node16 resolution: the e2e specs
+    // are loaded by Playwright and the harnesses are plain ESM run by node.
+    // Matches web-client's tsconfig.node.json rather than the node22 base.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+
+    // `allowJs` brings the harnesses, the launchers and `scripts/*.mjs` into the
+    // program so they are PARSED — a syntax error in any of them now fails the
+    // gate, which it previously did not.
+    "allowJs": true,
+    // `checkJs` stays OFF. This matches the boundary OPS-75 chose for
+    // pukeko-robot-controller, and the two consumers agreeing is worth
+    // something — but it is adopted on this repository's own measurement, not
+    // inherited. Turning it on reports 72 errors across those eight JavaScript
+    // files. Relaxing `noImplicitAny` (50 of the 72 are implicitly-typed
+    // callback parameters) still leaves 18, and 17 of those 18 are @types/node
+    // artifacts rather than defects: 12 are the `spawn` overloads intersecting
+    // to `never` so that `proc.on` cannot be called at all, and 5 are unknown-
+    // typed catch variables. Reaching green would mean annotating harnesses
+    // that can only be exercised against a booted stack and a live model.
+    //
+    // So the five TypeScript files here are fully type-checked under `strict`,
+    // the eight JavaScript ones are syntax-checked, and anything stronger for
+    // the latter belongs in its own ticket. The one finding worth carrying
+    // there: `scripts/bump-vue-ui.mjs` imports `semver` with no `@types/semver`
+    // installed, which is a real missing dependency rather than an artifact.
+    "checkJs": false
+  }
+}

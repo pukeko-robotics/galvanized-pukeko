@@ -15,7 +15,8 @@
   "packageManager": "pnpm@11.3.0",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
-    "build": "pnpm -r run build",
+    "type-check": "tsc -p tsconfig.tooling.json",
+    "build": "pnpm run type-check && pnpm -r run build",
     "lint": "oxlint --ignore-path .gitignore --ignore-pattern \"packages/galvanized-pukeko-agent-adk/src/main/resources/browser/**\" -D correctness .",
     "test": "node scripts/check-no-bare-launchers.mjs && pnpm run lint && pnpm -r run test",
     "web": "pnpm --filter @galvanized-pukeko/web-client run dev",
