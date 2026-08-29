@@ -56,12 +56,13 @@ name: Unit tests
 #     own tooling project, reached through the package's `type-check` and so
 #     through the Build step above, which is what makes a nonexistent plugin
 #     option fail this job rather than pass unread (OPS-91). Its e2e/ is not
-#     covered by that project or any other: e2e/harness.ts,
-#     e2e/theme.visual.spec.ts and e2e/vite.harness.config.ts import .vue
-#     single-file components, so they need vue-tsc and the dom lib rather than
-#     the node22 project their siblings use — pulled into it they report TS2307
-#     on the component imports instead of checking anything. Covering them is a
-#     separate project, not a wider `include`. web-client has neither gap: its
+#     covered by that project or any other. e2e/harness.ts imports .vue
+#     single-file components directly and e2e/theme.visual.spec.ts pulls that
+#     file in, so both need vue-tsc and the dom lib rather than the node22
+#     project their siblings use — added to it they report TS2307 on the
+#     component imports instead of checking anything. Only
+#     e2e/vite.harness.config.ts would fit as-is. So that directory wants its own
+#     project, not a wider `include`. web-client has neither gap: its
 #     tsconfig.node.json covers vite.config.ts, vitest.config.ts and
 #     eslint.config.ts, and tsconfig.vitest.json covers its tests/.
 #   - examples/ and experiments/ are outside all of it. They sit outside the pnpm

@@ -37,12 +37,15 @@
   // `@playwright/test` from THIS package's `node_modules`, not the repository
   // root's, so the program has to be rooted here to see them.
   //
-  // WHAT IT STILL DOES NOT COVER: `e2e/`. Those three TypeScript files import
-  // `.vue` single-file components, so they need vue-tsc and the dom lib rather
-  // than plain `tsc` under node22 — pulled in here they report TS2307 on the
-  // component imports instead of checking anything, so covering them is a
-  // different project, not a wider `include`. They remain in no project; that is
-  // its own ticket rather than a silent omission.
+  // WHAT IT STILL DOES NOT COVER: `e2e/`. `harness.ts` imports `.vue`
+  // single-file components directly, and `theme.visual.spec.ts` pulls that file
+  // in, so both need vue-tsc and the dom lib rather than plain `tsc` under
+  // node22 — added here they report TS2307 on the component imports instead of
+  // checking anything. Only `e2e/vite.harness.config.ts` would fit as-is, and
+  // splitting one file off from the two beside it buys a fragment rather than
+  // coverage. So that directory wants its own project, not a wider `include`
+  // here. It remains in no project; that is its own ticket rather than a silent
+  // omission.
   "extends": "@tsconfig/node22/tsconfig.json",
 
   // A glob rather than a hand-listed set of filenames, matching the choice the
