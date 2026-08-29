@@ -9,7 +9,6 @@ import {
   webcamPanelCaptureSource,
   createOnDemandCaptureSource,
   createHttpSnapshotCaptureSource,
-  DEFAULT_HTTP_SNAPSHOT_TIMEOUT_MS,
   type ImageCaptureSource,
 } from './captureImage'
 
@@ -275,10 +274,17 @@ describe('createHttpSnapshotCaptureSource', () => {
     warn.mockRestore()
   })
 
-  function imageResponse(bytes: Uint8Array, contentType: string | null = 'image/jpeg') {
+  function imageResponse(
+    bytes: Uint8Array,
+    contentType: string | null = 'image/jpeg',
+    status = 200,
+  ) {
     // A fresh ArrayBuffer copy: Response wants a BodyInit, not a typed-array view.
+    // A byte body also matters: a STRING body makes the Response constructor stamp
+    // `Content-Type: text/plain`, which would let the mime check stand in for the
+    // status check and quietly hollow out the non-2xx tests below.
     return new Response(bytes.slice().buffer as ArrayBuffer, {
-      status: 200,
+      status,
       headers: contentType == null ? {} : { 'content-type': contentType },
     })
   }
@@ -305,7 +311,7 @@ describe('createHttpSnapshotCaptureSource', () => {
     expect(base64ToBytes(envelope!.data)).toEqual(FRAME_BYTES)
   })
 
-  it('GETs the URL with an abort signal and a default timeout', async () => {
+  it('GETs the URL with an abort signal', async () => {
     const fetchImpl = vi.fn(async () => imageResponse(FRAME_BYTES))
     const source = createHttpSnapshotCaptureSource({
       getUrl: () => 'http://robot.local/snapshot.jpg',
@@ -319,7 +325,8 @@ describe('createHttpSnapshotCaptureSource', () => {
     expect(url).toBe('http://robot.local/snapshot.jpg')
     expect(init.method).toBe('GET')
     expect(init.signal).toBeInstanceOf(AbortSignal)
-    expect(DEFAULT_HTTP_SNAPSHOT_TIMEOUT_MS).toBeGreaterThan(0)
+    // A live deadline, not one that had already elapsed before the request went out.
+    expect(init.signal!.aborted).toBe(false)
   })
 
   it('takes the mime type from Content-Type, ignoring parameters', async () => {
@@ -371,12 +378,27 @@ describe('createHttpSnapshotCaptureSource', () => {
       await expect(captureImageResult(source)).resolves.toBe(FROZEN_CAPTURE_ERROR)
     }
 
-    it('on a non-2xx response (404)', async () => {
+    // These two responses are deliberately indistinguishable from a good frame
+    // EXCEPT for their status: real image bytes, an explicit `image/jpeg` header.
+    // A robot whose error handler still declares an image content type, or a proxy
+    // returning a placeholder image with an error status, produces exactly this —
+    // and only the status guard can reject it, so only these cases pin that guard.
+    it('on a 404 that still declares image/jpeg and carries a plausible body', async () => {
       await expectFailure(
         createHttpSnapshotCaptureSource({
           getUrl: () => 'http://robot.local/snapshot.jpg',
           fetch: (async () =>
-            new Response('not found', { status: 404 })) as unknown as typeof globalThis.fetch,
+            imageResponse(FRAME_BYTES, 'image/jpeg', 404)) as unknown as typeof globalThis.fetch,
+        }),
+      )
+    })
+
+    it('on a 500 that still declares image/jpeg and carries a plausible body', async () => {
+      await expectFailure(
+        createHttpSnapshotCaptureSource({
+          getUrl: () => 'http://robot.local/snapshot.jpg',
+          fetch: (async () =>
+            imageResponse(FRAME_BYTES, 'image/jpeg', 500)) as unknown as typeof globalThis.fetch,
         }),
       )
     })
