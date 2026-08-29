@@ -2,7 +2,6 @@ import { fileURLToPath, URL } from 'node:url'
 import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import dts from 'unplugin-dts/vite'
 
 /**
  * Separate build for the `@galvanized-pukeko/vue-ui/copilot` sub-export (P2b
@@ -11,20 +10,16 @@ import dts from 'unplugin-dts/vite'
  * + CJS only (no UMD — the CopilotKit modes target bundler-based apps). The root
  * `vite.config.ts` build runs first with `emptyOutDir`; this one appends to the
  * same `dist/` without clearing it.
+ *
+ * This build emits JS and CSS only — no declarations. The root build's dts pass
+ * already covers all of `src/`, so it writes `dist/copilot.d.ts` and the
+ * `copilot/` + `a2ui` supporting declarations itself; a dts pass here re-emitted
+ * a byte-identical subset over the top. Declarations therefore have exactly one
+ * producer, and this build must keep running after the root one (the `build`
+ * script orders them). See `vite.config.ts` for why the tree is not bundled.
  */
 export default defineConfig({
-  plugins: [
-    vue(),
-    dts({
-      insertTypesEntry: false,
-      // Per-file emit (not rolled up): produces dist/copilot.d.ts plus the
-      // copilot/ + a2ui supporting declarations, without clobbering the root
-      // build's rolled-up index.d.ts.
-      rollupTypes: false,
-      include: ['src/copilot.ts', 'src/copilot/**', 'src/components/a2ui/**'],
-      exclude: ['src/**/*.spec.ts'],
-    }),
-  ],
+  plugins: [vue()],
   build: {
     emptyOutDir: false,
     lib: {
