@@ -106,6 +106,166 @@ describe('toBubbles (headless message projection)', () => {
     expect(bubble.parts[0]).toMatchObject({ kind: 'tool-call', args: {}, argsRaw: 'not-json{' })
   })
 
+  // RC-47: reasoning ("thinking") is retained by @ag-ui/client as its own
+  // `role: 'reasoning'` message on AbstractAgent.messages, ahead of the
+  // assistant message for the same turn. Before this node nothing projected it,
+  // so HeadlessChat.vue's `thinking-part` renderer never had a part to mount.
+  describe('reasoning projection', () => {
+    it('projects a reasoning message into a thinking part ahead of the assistant text', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'u1', role: 'user', content: 'where is the robot?' },
+        { id: 'r1', role: 'reasoning', content: 'Checking the floor plan.' },
+        { id: 'a1', role: 'assistant', content: 'It is by the window.' },
+      ]
+      const bubbles = toBubbles(msgs)
+      expect(bubbles).toHaveLength(2)
+      expect(bubbles[0]).toEqual({ kind: 'user', id: 'u1', text: 'where is the robot?' })
+      const assistant = bubbles[1]
+      if (assistant.kind !== 'assistant') throw new Error('expected assistant')
+      expect(assistant.parts).toEqual([
+        { kind: 'thinking', text: 'Checking the floor plan.', done: true },
+        { kind: 'text', text: 'It is by the window.' },
+      ])
+      // Keyed by the reasoning message that opened the bubble, so the bubble
+      // rendered while thinking streams is the same one the answer lands in
+      // (a changing key would remount it and make the thinking flicker away).
+      expect(assistant.id).toBe('r1')
+    })
+
+    it('holds thinking open across an assistant message that contributes no parts', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'r1', role: 'reasoning', content: 'Considering.' },
+        { id: 'a1', role: 'assistant', content: '' },
+        { id: 'a2', role: 'assistant', content: 'Done.' },
+      ]
+      const bubbles = toBubbles(msgs)
+      expect(bubbles).toHaveLength(1)
+      expect(bubbles[0]).toEqual({
+        kind: 'assistant',
+        id: 'r1',
+        parts: [
+          { kind: 'thinking', text: 'Considering.', done: true },
+          { kind: 'text', text: 'Done.' },
+        ],
+      })
+    })
+
+    it('marks a thinking part done when a tool call follows it', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'r1', role: 'reasoning', content: 'I should look it up.' },
+        {
+          id: 'a1',
+          role: 'assistant',
+          toolCalls: [
+            { id: 'tc1', function: { name: 'get_weather', arguments: '{"city":"Auckland"}' } },
+          ],
+        },
+      ]
+      const [bubble] = toBubbles(msgs)
+      if (bubble.kind !== 'assistant') throw new Error('expected assistant')
+      expect(bubble.parts[0]).toEqual({
+        kind: 'thinking',
+        text: 'I should look it up.',
+        done: true,
+      })
+      expect(bubble.parts[1]).toMatchObject({
+        kind: 'tool-call',
+        toolCallId: 'tc1',
+        toolCallName: 'get_weather',
+        status: 'pending',
+      })
+    })
+
+    it('leaves a still-streaming trailing reasoning message open in its own bubble', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'u1', role: 'user', content: 'go home' },
+        { id: 'r1', role: 'reasoning', content: 'Planning a route' },
+      ]
+      const bubbles = toBubbles(msgs)
+      expect(bubbles).toHaveLength(2)
+      expect(bubbles[1]).toEqual({
+        kind: 'assistant',
+        id: 'r1',
+        parts: [{ kind: 'thinking', text: 'Planning a route', done: false }],
+      })
+    })
+
+    it('keeps consecutive reasoning messages as separate parts, closing all but the last', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'r1', role: 'reasoning', content: 'First thought.' },
+        { id: 'r2', role: 'reasoning', content: 'Second thought' },
+      ]
+      const bubbles = toBubbles(msgs)
+      expect(bubbles).toHaveLength(1)
+      expect(bubbles[0]).toEqual({
+        kind: 'assistant',
+        id: 'r1',
+        parts: [
+          { kind: 'thinking', text: 'First thought.', done: true },
+          { kind: 'thinking', text: 'Second thought', done: false },
+        ],
+      })
+    })
+
+    it('closes a thinking part when the user speaks again without an assistant turn', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'r1', role: 'reasoning', content: 'Half a thought' },
+        { id: 'u2', role: 'user', content: 'never mind' },
+      ]
+      expect(toBubbles(msgs)).toEqual([
+        {
+          kind: 'assistant',
+          id: 'r1',
+          parts: [{ kind: 'thinking', text: 'Half a thought', done: true }],
+        },
+        { kind: 'user', id: 'u2', text: 'never mind' },
+      ])
+    })
+
+    it('still attaches tool results across a turn that reasoned first', () => {
+      const msgs: AgentMessageLike[] = [
+        { id: 'r1', role: 'reasoning', content: 'Ping it.' },
+        {
+          id: 'a1',
+          role: 'assistant',
+          toolCalls: [{ id: 'tc1', function: { name: 'ping', arguments: '{}' } }],
+        },
+        { id: 't1', role: 'tool', toolCallId: 'tc1', content: 'pong' },
+        { id: 'r2', role: 'reasoning', content: 'It answered.' },
+        { id: 'a2', role: 'assistant', content: 'The robot is up.' },
+      ]
+      const bubbles = toBubbles(msgs)
+      expect(bubbles).toHaveLength(2)
+      const first = bubbles[0]
+      const second = bubbles[1]
+      if (first.kind !== 'assistant' || second.kind !== 'assistant') {
+        throw new Error('expected two assistant bubbles')
+      }
+      expect(first.parts[0]).toEqual({ kind: 'thinking', text: 'Ping it.', done: true })
+      expect(first.parts[1]).toMatchObject({
+        kind: 'tool-call',
+        toolCallId: 'tc1',
+        result: 'pong',
+        status: 'complete',
+      })
+      expect(second.parts).toEqual([
+        { kind: 'thinking', text: 'It answered.', done: true },
+        { kind: 'text', text: 'The robot is up.' },
+      ])
+    })
+
+    it('renders an empty reasoning message as an empty open thinking part', () => {
+      const msgs: AgentMessageLike[] = [{ id: 'r1', role: 'reasoning', content: '' }]
+      expect(toBubbles(msgs)).toEqual([
+        {
+          kind: 'assistant',
+          id: 'r1',
+          parts: [{ kind: 'thinking', text: '', done: false }],
+        },
+      ])
+    })
+  })
+
   it('does not render system/developer messages', () => {
     const msgs: AgentMessageLike[] = [
       { id: 's1', role: 'system', content: 'be nice' },

@@ -148,6 +148,47 @@ describe('HeadlessChat chrome (PLAT-20)', () => {
     expect(wrapper.find('[data-testid="pk-headless-waiting-placeholder"]').exists()).toBe(true)
   })
 
+  // RC-47: the seam test. HeadlessChat.vue's `thinking-part` renderer and the
+  // projection in useHeadlessChat.ts were each defensible alone while the
+  // feature was entirely absent, because nothing built a thinking part. This
+  // mounts the real component over a real-shaped agent log — the `reasoning`
+  // message @ag-ui/client retains on AbstractAgent.messages — so renderer and
+  // projection are pinned together. A hand-built part would not have caught it.
+  it('renders streamed reasoning as thinking text inside the assistant bubble', () => {
+    setAgent([
+      { id: 'u1', role: 'user', content: 'where is the robot?' },
+      { id: 'r1', role: 'reasoning', content: 'Checking the floor plan.' },
+      { id: 'a1', role: 'assistant', content: 'It is by the window.' },
+    ])
+    const wrapper = mount(HeadlessChat, { props: { agentId: 'default', a2uiTarget: 'panel' } })
+
+    const assistant = wrapper.find('[data-testid="pk-headless-assistant"]')
+    expect(assistant.exists()).toBe(true)
+
+    const thinking = assistant.find('.thinking-part')
+    expect(thinking.exists()).toBe(true)
+    expect(thinking.text()).toBe('Checking the floor plan.')
+
+    // The answer still renders, and the thinking block precedes it.
+    const content = assistant.find('.message-content')
+    expect(content.find('.text-part').text()).toBe('It is by the window.')
+    const kinds = Array.from(content.element.children).map((el) => el.className)
+    expect(kinds).toEqual(['thinking-part', 'text-part'])
+  })
+
+  it('renders reasoning that is still streaming, before any assistant text exists', () => {
+    setAgent([
+      { id: 'u1', role: 'user', content: 'go home' },
+      { id: 'r1', role: 'reasoning', content: 'Planning a route' },
+    ])
+    const wrapper = mount(HeadlessChat, { props: { agentId: 'default', a2uiTarget: 'panel' } })
+
+    const assistant = wrapper.find('[data-testid="pk-headless-assistant"]')
+    expect(assistant.exists()).toBe(true)
+    expect(assistant.find('.thinking-part').text()).toBe('Planning a route')
+    expect(assistant.find('.text-part').exists()).toBe(false)
+  })
+
   it('renders the send hint under the input area', () => {
     setAgent([])
     const wrapper = mount(HeadlessChat, { props: { agentId: 'default', a2uiTarget: 'panel' } })
