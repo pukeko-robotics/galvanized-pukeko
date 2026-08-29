@@ -52,8 +52,11 @@ name: Unit tests
 #     so vite.config.ts, vite.copilot.config.ts, vitest.config.ts and
 #     playwright.config.ts inside that package are reached by neither.
 #     web-client has no such gap — its tsconfig.node.json covers its equivalents.
-#     Type-checking those four today reports two real errors, so this is a known
-#     gap with a known cost rather than an oversight; see the OPS-87 report.
+#     Type-checking those four reports no errors today, so closing this gap is
+#     additive: it needs a tooling project for the package, not a fix first. It
+#     stays a known gap rather than an oversight; see the OPS-87 report. The gap
+#     is not free — it is what let a nonexistent `unplugin-dts` option sit in
+#     vite.config.ts unread, shipping unintended declarations (OPS-91).
 #   - examples/ and experiments/ are outside all of it. They sit outside the pnpm
 #     workspace, so `pnpm -r` never reaches them, and outside tsconfig.tooling.json,
 #     which is scoped to the root's own files. Two of them carry their own tsconfig
