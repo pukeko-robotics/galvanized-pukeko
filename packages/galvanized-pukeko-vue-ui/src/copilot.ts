@@ -45,12 +45,16 @@ export {
   createCaptureImageClientTool,
   webcamPanelCaptureSource,
   createOnDemandCaptureSource,
+  createHttpSnapshotCaptureSource,
+  DEFAULT_HTTP_SNAPSHOT_MIME,
+  DEFAULT_HTTP_SNAPSHOT_TIMEOUT_MS,
 } from './services/captureImage'
 export type {
   ImageEnvelope,
   ImageCaptureSource,
   CaptureImageToolOptions,
   OnDemandCaptureOptions,
+  HttpSnapshotCaptureOptions,
 } from './services/captureImage'
 
 // Per-tool display registry (PLAT-17). Re-exported here as well as from the

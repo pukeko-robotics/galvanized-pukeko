@@ -278,3 +278,109 @@ export function createOnDemandCaptureSource(opts: OnDemandCaptureOptions = {}): 
     captureFrame: () => grabFrame(),
   }
 }
+
+/** Mime type assumed when a snapshot response carries no `Content-Type`. */
+export const DEFAULT_HTTP_SNAPSHOT_MIME = 'image/jpeg'
+
+/** Default deadline for a snapshot fetch (see {@link HttpSnapshotCaptureOptions.timeoutMs}). */
+export const DEFAULT_HTTP_SNAPSHOT_TIMEOUT_MS = 5_000
+
+/** Options for {@link createHttpSnapshotCaptureSource}. */
+export interface HttpSnapshotCaptureOptions {
+  /**
+   * The snapshot endpoint, read lazily on EVERY capture. A getter rather than a
+   * string because the host a consumer points at is switchable at runtime, so a
+   * URL captured at construction time would keep addressing the previous target.
+   * Yield an empty/nullish value to mean "no target configured" — that is what
+   * `isReady()` reports on.
+   */
+  getUrl: () => string | null | undefined
+  /**
+   * Milliseconds before the fetch is aborted (default
+   * {@link DEFAULT_HTTP_SNAPSHOT_TIMEOUT_MS}). An unreachable host on an
+   * access-point IP does not refuse the connection, it hangs; a turn parked
+   * forever on a fetch is a worse failure than a reported capture error.
+   */
+  timeoutMs?: number
+  /** Fetch implementation (default: the global `fetch`), injectable for tests. */
+  fetch?: typeof globalThis.fetch
+}
+
+/** Base64-encode raw bytes without assuming a Node `Buffer` is present. */
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = ''
+  // Chunked so a large frame cannot blow the argument limit of String.fromCharCode.
+  const CHUNK = 0x8000
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+  }
+  return btoa(binary)
+}
+
+/**
+ * A capture source that fetches one frame over HTTP instead of opening a camera
+ * — the shape shared by a robot's onboard snapshot endpoint and by a simulator
+ * serving rendered frames. `GET`s {@link HttpSnapshotCaptureOptions.getUrl}'s
+ * current value, reads the bytes, and returns them as a `data:` URL whose mime
+ * type comes from the response's `Content-Type` (falling back to
+ * {@link DEFAULT_HTTP_SNAPSHOT_MIME}).
+ *
+ * Every failure — non-2xx, a network throw, a timeout, or a non-`image/*`
+ * content type such as a captive portal's HTML 200 — returns null and throws
+ * nothing, so {@link captureImageResult} renders the frozen error envelope. The
+ * content-type check exists so an HTML error page is rejected here, where the
+ * reason can be logged, rather than one layer later inside
+ * {@link frameToEnvelope}.
+ */
+export function createHttpSnapshotCaptureSource(
+  options: HttpSnapshotCaptureOptions,
+): ImageCaptureSource {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_HTTP_SNAPSHOT_TIMEOUT_MS
+
+  /** The currently configured URL, or null when nothing is configured. */
+  function currentUrl(): string | null {
+    const url = options.getUrl()
+    if (typeof url !== 'string') return null
+    const trimmed = url.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  async function grabFrame(): Promise<string | null> {
+    // Read the getter per capture: the target can change between captures.
+    const url = currentUrl()
+    if (!url) return null
+    const doFetch = options.fetch ?? globalThis.fetch
+    if (typeof doFetch !== 'function') return null
+    try {
+      const response = await doFetch(url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (!response.ok) {
+        console.warn(`[captureImage] snapshot fetch failed: HTTP ${response.status}`)
+        return null
+      }
+      const header = response.headers.get('content-type') ?? ''
+      const mime = header.split(';')[0].trim().toLowerCase() || DEFAULT_HTTP_SNAPSHOT_MIME
+      if (!mime.startsWith('image/')) {
+        console.warn(`[captureImage] snapshot response was not an image: ${mime}`)
+        return null
+      }
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      return `data:${mime};base64,${bytesToBase64(bytes)}`
+    } catch (err) {
+      console.warn('[captureImage] snapshot capture failed:', err)
+      return null
+    }
+  }
+
+  return {
+    // "Ready" means a capture is worth attempting — i.e. a target is configured.
+    // Deliberately NOT a network probe: reachability is not knowable without
+    // doing the fetch, and probing before every capture doubles the cost to
+    // learn nothing. An unreachable target surfaces as the capture-failed
+    // envelope from grabFrame's null.
+    isReady: () => currentUrl() != null,
+    captureFrame: () => grabFrame(),
+  }
+}
