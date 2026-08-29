@@ -58,19 +58,32 @@ Global maven is not available on this machine use `./mvnw` for java projects (`p
 
 ## Publishing `@galvanized-pukeko/vue-ui`
 
-`vue-ui` is published to the **public** npm registry. `@gaunt-sloth/*` is
-consumed from public npm too (the `2.0.0-alpha.x` line), so there is no local
-registry and no cross-repo `file:` redirect. To cut a `vue-ui` release:
+`vue-ui` is the one public package here; the web-client and agent-adk packages are
+private examples and are never published. `@gaunt-sloth/*` is consumed from public
+npm too, so there is no local registry and no cross-repo `file:` redirect.
 
-This is a pnpm workspace (`packageManager: pnpm@11.3.0`), so use pnpm. Set the
-next public version by hand (the 0.0.14/15/16 tags were verdaccio-local and never
-public — public went 0.0.13 → 0.1.0), build, then publish:
+**Releases go through the `Release` workflow (`.github/workflows/release.yml`), and
+only through it.** Never hand-run `npm publish` or `pnpm publish`: the workflow is
+what runs the unit-test gate, publishes over npm Trusted Publishing (OIDC, no token
+on anyone's machine), attaches provenance, and cuts the `vue-ui-v<version>` GitHub
+release. Dispatching it is a by-hand step taken at a release milestone, by Andrew.
+
+The versioning model is **release-current-then-post-bump**: a run ships whatever
+version `packages/galvanized-pukeko-vue-ui/package.json` carries on `main`, and only
+after a successful publish writes the next one back. So **the number on `main` is
+always the next release, not the last** — `npm view @galvanized-pukeko/vue-ui` is the
+only answer to what actually shipped. The dispatch inputs describe that post-bump.
+
+Set a version with the bump script rather than by hand — it also derives
+`publishConfig.tag` from the version, which is what stops a prerelease landing on
+`latest`:
 
 ```bash
-cd packages/galvanized-pukeko-vue-ui
-pnpm version 0.1.0 --no-git-tag-version   # or edit package.json by hand
-pnpm run build                            # pnpm publish does NOT auto-build (no prepublishOnly)
-pnpm publish                              # publishConfig sets access: public; add --no-git-checks if the tree is dirty
+pnpm run release:bump -- 0.2.0            # explicit version
+pnpm run release:bump -- prerelease alpha # or a semver verb + preid
+pnpm run release:bump -- minor --dry-run  # compute only, write nothing
 ```
 
-Then bump each consumer's `@galvanized-pukeko/vue-ui` pin and reinstall.
+A stable version publishes to `latest`; a prerelease publishes to its own preid tag
+(`alpha`/`beta`/`rc`) and leaves `latest` where it is. Consumers move to a new vue-ui
+deliberately, by bumping their own pin to a version that is on the registry.
