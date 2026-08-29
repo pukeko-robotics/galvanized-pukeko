@@ -193,11 +193,16 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          # Post-bump pushes to main as github-actions[bot] via the default
-          # GITHUB_TOKEN (contents: write). If galvanized gains a branch ruleset
-          # that rejects the bot push (as gaunt-sloth's CodeQL ruleset does — sloth
-          # uses a deploy key to bypass it), add a bypass actor / deploy key for
-          # this repo. ANDREW-FOLLOW-UP; does not block the publish above.
+          # Push the post-bump commit as a Deploy Key, not as github-actions[bot].
+          # main's ruleset requires the "Lint and unit tests (24.x)" check on the
+          # pushed commit, and a commit this job just created can never already have
+          # one — a structural deadlock, and the publish above has already happened
+          # by the time it bites. github-actions[bot] is not a bypass actor; the
+          # write-enabled deploy key whose private half is the RELEASE_SSH_KEY
+          # environment secret is. Setting ssh-key here also switches origin to SSH
+          # for the push; the npm publish (OIDC) and the GitHub Release (gh) go via
+          # the registry and the API and are unaffected.
+          ssh-key: ${{ secrets.RELEASE_SSH_KEY }}
       - name: Enable Corepack
         run: corepack enable
       - name: Use Node.js
