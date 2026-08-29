@@ -17,7 +17,16 @@
  */
 import type { MessagePart } from '../services/chatService'
 
-/** An agent message as it appears on `AbstractAgent.messages`. */
+/**
+ * An agent message as it appears on `AbstractAgent.messages`.
+ *
+ * `role` covers `user` / `assistant` / `tool` / `system` and — RC-47 —
+ * `reasoning`: `@ag-ui/client` keeps the model's thinking as a first-class
+ * message of its own, whose `content` accumulates as REASONING_MESSAGE_CONTENT
+ * arrives and is flushed to the full value on REASONING_MESSAGE_END. It is a
+ * separate message from the assistant message of the same turn, and it arrives
+ * ahead of it.
+ */
 export interface AgentMessageLike {
   id: string
   role: string
@@ -43,14 +52,61 @@ function parseArgs(raw: string): { args: unknown; argsRaw: string } {
  * for one turn are merged into a single assistant bubble (mirroring the bespoke
  * `AssistantStreamingMessage` shape), and `tool` messages are attached as the
  * matching tool-call's result so {@link ToolCallBadge} can show args+result.
+ *
+ * Reasoning (RC-47) rides the same bubble as the turn it belongs to: a
+ * `reasoning` message becomes a `thinking` part held open until the assistant
+ * message of that turn arrives, at which point thinking + text + tool calls
+ * render as one AI bubble — the same grouping the bespoke `chatService` builds
+ * from the event stream. While reasoning is still streaming there is no
+ * assistant message yet, so the open thinking parts are emitted as a bubble of
+ * their own, keyed by the first reasoning message's id so the bubble does not
+ * remount when the assistant text later joins it.
+ *
+ * `done` mirrors `chatService`: a thinking part closes once the model has moved
+ * on. The message log cannot observe REASONING_MESSAGE_END, so the rule here is
+ * that anything appearing after a reasoning message closes it, and only the
+ * last message in the log can leave one open.
  */
 export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble[] {
   const bubbles: ChatBubble[] = []
   // toolCallId -> the tool-call part, so a later `tool` message can fill result.
   const toolPartIndex = new Map<string, Extract<MessagePart, { kind: 'tool-call' }>>()
 
+  // Thinking parts awaiting the assistant message of their turn.
+  let openThinking: Array<Extract<MessagePart, { kind: 'thinking' }>> = []
+  let openThinkingId: string | null = null
+
+  /** Close every held thinking part — something has followed them. */
+  function closeThinking(): void {
+    for (const part of openThinking) part.done = true
+  }
+
+  /** Emit the held thinking parts as a bubble of their own, in log order. */
+  function flushThinking(): void {
+    if (openThinking.length > 0 && openThinkingId !== null) {
+      bubbles.push({ kind: 'assistant', id: openThinkingId, parts: openThinking })
+    }
+    openThinking = []
+    openThinkingId = null
+  }
+
   for (const m of messages) {
+    if (m.role === 'reasoning') {
+      // A new reasoning message means the previous one finished.
+      closeThinking()
+      const part: Extract<MessagePart, { kind: 'thinking' }> = {
+        kind: 'thinking',
+        text: m.content ?? '',
+        done: false,
+      }
+      openThinking.push(part)
+      openThinkingId ??= m.id
+      continue
+    }
+
     if (m.role === 'user') {
+      closeThinking()
+      flushThinking()
       // Skip the serialized-A2UI-action messages from cluttering the transcript?
       // Keep them visible — they're genuine user turns.
       bubbles.push({ kind: 'user', id: m.id, text: m.content ?? '' })
@@ -73,7 +129,15 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
         parts.push(part)
         toolPartIndex.set(tc.id, part)
       }
-      if (parts.length > 0) bubbles.push({ kind: 'assistant', id: m.id, parts })
+      if (parts.length > 0) {
+        // The turn moved on to text or a tool call: close the thinking that led
+        // to it and render both in one bubble, thinking first (log order).
+        closeThinking()
+        const id = openThinkingId ?? m.id
+        bubbles.push({ kind: 'assistant', id, parts: [...openThinking, ...parts] })
+        openThinking = []
+        openThinkingId = null
+      }
       continue
     }
 
@@ -86,6 +150,10 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
     }
     // system/developer messages are not rendered.
   }
+
+  // Reasoning that is still streaming (or that ended the log) has no assistant
+  // message to join yet — show it, still open, so thinking is visible live.
+  flushThinking()
 
   return bubbles
 }
