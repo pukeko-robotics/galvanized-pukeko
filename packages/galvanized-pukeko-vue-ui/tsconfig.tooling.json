@@ -1,0 +1,73 @@
+{
+  // OPS-104 — this package's own config files, which until now belonged to no
+  // type-check project at all.
+  //
+  // The `tsconfig.json` beside this file is scoped to `src/**` and `env.d.ts`
+  // with the dom lib, and the repository root's `tsconfig.tooling.json` is
+  // scoped to the root's own paths. So `vite.config.ts`,
+  // `vite.copilot.config.ts`, `vitest.config.ts` and `playwright.config.ts` sat
+  // between the two and were parsed by neither.
+  //
+  // That is not a hypothetical hole. `vite.config.ts` passed `rollupTypes: true`
+  // to unplugin-dts, which has no such option, and an unrecognised key in a
+  // plugin's options object is discarded in silence — so the package published a
+  // scattered declaration tree, spec declarations included, for the life of the
+  // setting (OPS-91). TypeScript reports exactly that mistake as TS2353, at
+  // exactly the line that carried it. The compiler had the answer the whole
+  // time; no project asked it.
+  //
+  // This is the same gap the repository root closed for its own files (OPS-87)
+  // and pukeko-robot-controller closed for its own (OPS-75), one level further
+  // in: not the root, but a package's tooling files. Deliberately the same shape
+  // — a second project beside the package's `tsconfig.json` rather than widening
+  // that one, because these four run under node against a bundler while `src/`
+  // targets a browser.
+  //
+  // HOW IT REACHES THE GATE. This project is run by this package's `type-check`
+  // script, which its `build` script runs first, which `pnpm -r run build`
+  // reaches from the root `build` script, which is the Build step of
+  // unit-tests.yml. So it rides a gate that already runs on every push, and adds
+  // no new required-check name for branch protection to learn. The wiring is the
+  // point, not the file: a project that merely exists, reachable by nothing,
+  // passes a green run while changing nothing — which is the failure this ticket
+  // exists to close.
+  //
+  // WHY IT LIVES INSIDE THE PACKAGE rather than being folded into the root's
+  // tooling project: these files resolve `vite`, `vitest`, `unplugin-dts` and
+  // `@playwright/test` from THIS package's `node_modules`, not the repository
+  // root's, so the program has to be rooted here to see them.
+  //
+  // WHAT IT STILL DOES NOT COVER: `e2e/`. Those three TypeScript files import
+  // `.vue` single-file components, so they need vue-tsc and the dom lib rather
+  // than plain `tsc` under node22 — pulled in here they report TS2307 on the
+  // component imports instead of checking anything, so covering them is a
+  // different project, not a wider `include`. They remain in no project; that is
+  // its own ticket rather than a silent omission.
+  "extends": "@tsconfig/node22/tsconfig.json",
+
+  // A glob rather than a hand-listed set of filenames, matching the choice the
+  // root's tooling project argued for: the next config file added beside these
+  // is covered on the day it is added, not on the day someone remembers to
+  // extend a list. It matches this directory only, so `e2e/` stays out.
+  "include": ["*.config.ts"],
+
+  "compilerOptions": {
+    "noEmit": true,
+
+    // vite, vitest and Playwright load these through a bundler rather than under
+    // node16 resolution. Matches web-client's `tsconfig.node.json` and the root
+    // tooling project rather than the node22 base.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    // No `typeRoots` is needed, though the ticket predicted one would be: pnpm
+    // gives this package no `node_modules/@types` of its own, but TypeScript's
+    // default type roots walk up from THIS file's directory and find the
+    // repository root's. That prediction came from a hand-rolled command line,
+    // where the files were passed as arguments and the walk started somewhere
+    // else; it does not carry over to a project rooted here. web-client's
+    // `tsconfig.node.json` relies on the same walk-up, for both this and the
+    // `extends` above.
+    "types": ["node"]
+  }
+}

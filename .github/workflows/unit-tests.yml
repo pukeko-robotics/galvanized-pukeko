@@ -17,8 +17,12 @@ name: Unit tests
 #      covering playwright.config.ts, e2e/*.spec.ts, scripts/*, the it-*.js
 #      harnesses and the start-*.js launchers, none of which belonged to any
 #      project before
-#   2. vue-ui's build, which now begins with its own `type-check`
-#      (`vue-tsc --noEmit`) before the two bundler passes
+#   2. vue-ui's build, which begins with its own `type-check` before the two
+#      bundler passes. That script is two projects: `vue-tsc` over `src/` and
+#      `env.d.ts`, then `tsc -p tsconfig.tooling.json` — the OPS-104 project
+#      covering that package's own vite.config.ts, vite.copilot.config.ts,
+#      vitest.config.ts and playwright.config.ts, which belonged to no project
+#      at all until it existed
 #   3. web-client's build, which has always begun with `vue-tsc --build`
 #
 # So the Build step SUBSUMES all three type-check passes. Running `type-check` as
@@ -47,16 +51,19 @@ name: Unit tests
 #     a type error in them still does not. That boundary is deliberate and its
 #     measurement is recorded in that file. The five TypeScript files it covers
 #     are fully checked under `strict`.
-#   - vue-ui's own config files are in no project. Its tsconfig includes `src/**`
-#     and `env.d.ts` only, and the root tooling project covers root-level paths,
-#     so vite.config.ts, vite.copilot.config.ts, vitest.config.ts and
-#     playwright.config.ts inside that package are reached by neither.
-#     web-client has no such gap — its tsconfig.node.json covers its equivalents.
-#     Type-checking those four reports no errors today, so closing this gap is
-#     additive: it needs a tooling project for the package, not a fix first. It
-#     stays a known gap rather than an oversight; see the OPS-87 report. The gap
-#     is not free — it is what let a nonexistent `unplugin-dts` option sit in
-#     vite.config.ts unread, shipping unintended declarations (OPS-91).
+#   - vue-ui's e2e/ is in no project. The gap that used to be recorded here — the
+#     four config files inside that package — is closed: OPS-104 gave them their
+#     own tooling project, reached through the package's `type-check` and so
+#     through the Build step above, which is what makes a nonexistent plugin
+#     option fail this job rather than pass unread (OPS-91). Its e2e/ is not
+#     covered by that project or any other: e2e/harness.ts,
+#     e2e/theme.visual.spec.ts and e2e/vite.harness.config.ts import .vue
+#     single-file components, so they need vue-tsc and the dom lib rather than
+#     the node22 project their siblings use — pulled into it they report TS2307
+#     on the component imports instead of checking anything. Covering them is a
+#     separate project, not a wider `include`. web-client has neither gap: its
+#     tsconfig.node.json covers vite.config.ts, vitest.config.ts and
+#     eslint.config.ts, and tsconfig.vitest.json covers its tests/.
 #   - examples/ and experiments/ are outside all of it. They sit outside the pnpm
 #     workspace, so `pnpm -r` never reaches them, and outside tsconfig.tooling.json,
 #     which is scoped to the root's own files. Two of them carry their own tsconfig
