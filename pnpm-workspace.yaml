@@ -3,8 +3,8 @@ packages:
   - 'packages/galvanized-pukeko-web-client'
 
 minimumReleaseAgeExclude:
-  - '@gaunt-sloth/agent@2.0.0-alpha.5'
-  - '@gaunt-sloth/core@2.0.0-alpha.5'
+  - '@gaunt-sloth/agent@2.0.0-beta.5'
+  - '@gaunt-sloth/core@2.0.0-beta.5'
 
 # @gaunt-sloth/agent is consumed from the public npm registry (2.0.0-alpha.x);
 # no cross-repo file: redirect is needed — the published package pins its own

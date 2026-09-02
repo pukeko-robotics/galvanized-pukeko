@@ -50,6 +50,10 @@ The example uses the Gaunt Sloth config from this directory (`.gsloth.config.jso
 
 The example ships with an OpenAI configuration. Set `OPENAI_API_KEY` in your environment or update `.gsloth.config.json` for a different provider.
 
+`gaunt-sloth-api` parses only its first argument (the API type). The `--port` and `--config` flags
+the launchers pass are accepted and ignored, so the port is whatever `commands.api.port` says and
+the config is discovered from the working directory.
+
 ## How It Works
 
 ```
