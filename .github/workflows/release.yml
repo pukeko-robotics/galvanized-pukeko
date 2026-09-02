@@ -36,7 +36,7 @@ on:
         description: 'POST-bump verb applied to main AFTER this release (sets the NEXT vue-ui version). Not the version shipped now.'
         type: choice
         required: true
-        default: prerelease
+        default: patch
         options:
           - patch
           - minor
@@ -47,11 +47,12 @@ on:
           - prerelease
           - explicit
       preid:
-        description: 'Prerelease channel for the POST-bump — only used by the pre*/prerelease verbs'
+        description: 'Prerelease channel for the POST-bump. Leave as n/a for patch/minor/major; required by the pre*/prerelease verbs.'
         type: choice
         required: false
-        default: alpha
+        default: n/a
         options:
+          - n/a
           - alpha
           - beta
           - rc
@@ -181,6 +182,7 @@ jobs:
       - name: Validate release inputs (before publish)
         env:
           BUMP: ${{ inputs.bump }}
+          PREID: ${{ inputs.preid }}
           EXPLICIT_VERSION: ${{ inputs.explicit_version }}
         run: |
           set -euo pipefail
@@ -188,7 +190,19 @@ jobs:
             echo "::error::bump=explicit requires a non-empty explicit_version (e.g. 0.2.0-alpha.0). Refusing to publish." >&2
             exit 1
           fi
-          echo "Inputs OK: bump=$BUMP explicit_version='${EXPLICIT_VERSION}'"
+          # A pre* verb with no channel selected would post-bump to a preid-LESS prerelease
+          # (0.2.3-0), whose publishConfig.tag derives to `latest` — the very latest-hijack
+          # bump-vue-ui.mjs's tag guard exists to prevent. Caught here, before the publish,
+          # because the post-bump runs after it and a failure there wedges the pipeline.
+          case "$BUMP" in
+            pre*)
+              if [ -z "$PREID" ] || [ "$PREID" = "n/a" ]; then
+                echo "::error::bump=$BUMP is a prerelease verb and needs a preid (alpha, beta or rc), not n/a. Refusing to publish." >&2
+                exit 1
+              fi
+              ;;
+          esac
+          echo "Inputs OK: bump=$BUMP preid='${PREID}' explicit_version='${EXPLICIT_VERSION}'"
       - uses: actions/checkout@v6
         with:
           ref: main
@@ -290,7 +304,19 @@ jobs:
             fi
             pnpm run release:bump-and-commit -- "$EXPLICIT_VERSION"
           else
-            pnpm run release:bump-and-commit -- "$BUMP" "$PREID"
+            # bump-vue-ui.mjs takes the preid POSITIONALLY and validates it whenever it is
+            # present at all — it does not care that patch/minor/major ignore one — so the
+            # "not a prerelease" choice must be dropped here rather than passed through as a
+            # literal. Match the real channels rather than the placeholder's spelling, so
+            # relabelling the dropdown cannot silently start forwarding a bad argument.
+            case "$PREID" in
+              alpha|beta|rc)
+                pnpm run release:bump-and-commit -- "$BUMP" "$PREID"
+                ;;
+              *)
+                pnpm run release:bump-and-commit -- "$BUMP"
+                ;;
+            esac
           fi
           NEXT="$(node -p "require('./packages/galvanized-pukeko-vue-ui/package.json').version")"
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"

@@ -6,8 +6,8 @@
 // examples). There is no cross-package version sync here.
 //
 //   pnpm run release:bump                      — patch-increment vue-ui's version
-//   pnpm run release:bump -- minor             — increment (patch|minor|major|pre*)
-//   pnpm run release:bump -- prerelease alpha  — semver.inc with a preid
+//   pnpm run release:bump -- minor             — increment (patch|minor|major)
+//   pnpm run release:bump -- prerelease alpha  — a pre* type, which REQUIRES a preid
 //   pnpm run release:bump -- 0.2.0-alpha.0     — set an explicit version
 //   pnpm run release:bump-and-commit -- ...    — same, then refresh pnpm-lock.yaml + git-commit
 //   ... --dry-run                              — compute + print only, write NOTHING
@@ -67,6 +67,18 @@ if (!isReleaseType && !isExplicit) {
 }
 if (preid !== undefined && !PREIDS.includes(preid)) {
   console.error(`Bad preid: ${preid}. Expected one of [${PREIDS.join(' | ')}].`);
+  process.exit(1);
+}
+// A pre* type with no preid is the one input that defeats the publishConfig.tag guard below
+// rather than tripping it: semver produces a NUMERIC prerelease (0.2.3-0), `deriveTag` finds no
+// string in the prerelease tuple, and the version is tagged `latest` — a prerelease hijacking the
+// stable channel, which is exactly what that guard exists to make impossible. Every pre* verb
+// therefore needs a channel; refuse rather than compute a version whose tag would be a lie.
+if (isReleaseType && spec.startsWith('pre') && preid === undefined) {
+  console.error(
+    `${spec} is a prerelease type and needs a preid: one of [${PREIDS.join(' | ')}]. ` +
+      `Without one the next version would be tagged "latest" on npm.`
+  );
   process.exit(1);
 }
 if (preid !== undefined && isExplicit) {
