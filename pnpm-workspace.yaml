@@ -6,17 +6,18 @@ minimumReleaseAgeExclude:
   - '@gaunt-sloth/agent@2.0.0-beta.5'
   - '@gaunt-sloth/core@2.0.0-beta.5'
 
-# @gaunt-sloth/agent is consumed from the public npm registry (2.0.0-alpha.x);
+# @gaunt-sloth/agent is consumed from the public npm registry (2.0.0-beta.x);
 # no cross-repo file: redirect is needed — the published package pins its own
 # @gaunt-sloth/core by version. The uuid floor keeps a single resolved copy.
 overrides:
   uuid: '>=11.1.1'
-  # @gaunt-sloth/* 2.0.0-alpha.5 ships zod-4-only schema code (z.looseObject)
-  # but still declares the permissive range `^3.25.0 || ^4.0.0`, so pnpm dedupes
-  # it onto this repo's own zod 3 and the AG-UI server crashes at boot. Force
-  # the gaunt-sloth subtree onto zod 4 (already in the tree). Scoped so this
-  # repo's own zod 3 + zod-to-json-schema@3 are untouched. Drop once upstream
-  # bumps its zod dep to ^4.
+  # Hold the gaunt-sloth subtree on zod 4, scoped so this repo's own zod 3 and
+  # zod-to-json-schema@3 are untouched — that isolation is the point (GS2-15)
+  # and stays whatever these three do. @gaunt-sloth/* now declares `^4.4.3`,
+  # which admits no zod 3, so pnpm can no longer dedupe the subtree onto zod 3
+  # and these entries are redundant rather than load-bearing. Removing them is
+  # its own ticket: measure the resolved zod copies before and after, because
+  # the failure they were added for was a silent boot crash in the AG-UI server.
   '@gaunt-sloth/core>zod': '^4.0.0'
   '@gaunt-sloth/agent>zod': '^4.0.0'
   '@gaunt-sloth/review>zod': '^4.0.0'
