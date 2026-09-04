@@ -44,15 +44,35 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   })
 }
 
+/**
+ * Draw the two supplied frames side by side and return the composite as a data
+ * URL, or `null` if it cannot be produced.
+ *
+ * `null` is the ONLY failure answer, on every path: no compositing canvas, no 2D
+ * context, or an input frame that will not decode. A decode failure is not more
+ * exceptional than the other two — all three mean "no composite this time" to a
+ * caller that can do nothing but skip the image — so it is reported the same way
+ * rather than as a rejection the signature does not declare (RC-54). The reason
+ * is logged, so a decode fault stays distinguishable from a missing canvas.
+ */
 async function composeBeforeAfter(
   beforeDataUrl: string,
   afterDataUrl: string
 ): Promise<string | null> {
   if (!canvasRef.value) return null
-  const [before, after] = await Promise.all([
-    loadImage(beforeDataUrl),
-    loadImage(afterDataUrl),
-  ])
+  let before: HTMLImageElement
+  let after: HTMLImageElement
+  try {
+    // Only the decode is guarded: a fault in the drawing below is a real bug and
+    // must not be flattened into the same null.
+    ;[before, after] = await Promise.all([
+      loadImage(beforeDataUrl),
+      loadImage(afterDataUrl),
+    ])
+  } catch (err) {
+    console.warn('[PkWebcamPanel] before/after compose failed to decode a frame:', err)
+    return null
+  }
 
   const targetH = Math.max(before.height, after.height)
   const scale = (img: HTMLImageElement) => targetH / img.height

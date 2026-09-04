@@ -29,6 +29,13 @@ const BEFORE_URL = 'data:image/jpeg;base64,QkVGT1JF'
 const AFTER_URL = 'data:image/jpeg;base64,QUZURVI='
 
 /**
+ * RC-54: a data URL that cannot be decoded (its base64 payload is the ASCII text
+ * `not-an-image`). Absent from IMAGE_SIZES, so the `src` patch below drives it
+ * down the `onerror` channel.
+ */
+const MALFORMED_URL = 'data:image/jpeg;base64,bm90LWFuLWltYWdl'
+
+/**
  * Deliberately DIFFERENT aspect ratios, so the two scaled widths differ (640 vs
  * 720 below). Equal widths would let a before/after mix-up pass unnoticed.
  */
@@ -281,5 +288,110 @@ describe('PkWebcamPanel — the compositing canvas is independent of the camera 
       expect(wrapper.find('canvas').exists()).toBe(true)
       expect(exposed(wrapper).captureFrame()).toBeNull()
     })
+  })
+})
+
+/**
+ * RC-54: `composeBeforeAfter` declares ONE failure answer, so it must give one.
+ *
+ * The signature says `string | null`, and the missing-canvas and missing-context
+ * paths return exactly that. An undecodable input frame used to be the exception:
+ * `loadImage` rejected, `Promise.all` propagated it, and the returned promise
+ * rejected — a second, undeclared failure protocol on the same function. A caller
+ * written against the type (`if (!composite) …`) handled one and got an unhandled
+ * rejection from the other.
+ *
+ * ## Why the stubbed error channel is the real one
+ * jsdom decodes no images, so these cells cannot let a real decode fail — the
+ * `src` patch above drives `onerror` from a lookup table. That patch therefore
+ * cannot, by itself, establish what production does; it can only replay what it
+ * was told. Two facts close that gap:
+ *
+ *  - Production's `loadImage` has exactly ONE failure channel — it rejects from
+ *    `img.onerror` and from nowhere else — so `onerror` is the only input that
+ *    can produce the defect being pinned here.
+ *  - A real Chromium was asked directly what an undecodable data URL does, using
+ *    this file's own {@link MALFORMED_URL} string: it fires `error`, never
+ *    `load`, and the `src` assignment throws nothing synchronously. A genuine 1x1
+ *    PNG fired `load` in the same probe, so `error` is a discriminating result
+ *    rather than everything failing.
+ *
+ * That probe also found that BEFORE_URL/AFTER_URL are not decodable images either
+ * (`QkVGT1JF` is the ASCII text `BEFORE`), so the lookup table cannot be replaced
+ * by real decodability without failing RC-45's cells. The stub stays a table on
+ * purpose; the fidelity argument lives out of band, above.
+ */
+describe('PkWebcamPanel — an undecodable frame returns null, not a rejection (RC-54)', () => {
+  /**
+   * A mounted panel with the drawing DOM stubbed and a camera that never opens.
+   * Local to RC-54 so its cells cannot perturb the RC-45 ones above.
+   */
+  async function mountForCompose() {
+    const ctx = stubDrawingDom()
+    stubGetUserMedia(() => new Promise<MediaStream>(() => {}))
+    const wrapper = mount(PkWebcamPanel)
+    await flushPromises()
+    return { wrapper, ctx }
+  }
+
+  /** Silence + capture the diagnostic warning; restored with every other patch. */
+  function spyOnWarn() {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    restores.push(() => warn.mockRestore())
+    return warn
+  }
+
+  /**
+   * Guard against a false pass: `null` must come from the DECODE failure, not
+   * from the missing-canvas early return that RC-45 pins. If the canvas were
+   * absent the function would return null at its first line, having never
+   * attempted a load, and these cells would pass while proving nothing.
+   */
+  function expectFailedAfterReachingTheLoad(wrapper: VueWrapper, ctx: CtxStub): void {
+    expect(wrapper.find('canvas').exists()).toBe(true)
+    expect(ctx.drawImage).not.toHaveBeenCalled()
+  }
+
+  it('returns null — the declared failure value — when the BEFORE frame cannot be decoded', async () => {
+    const { wrapper, ctx } = await mountForCompose()
+    spyOnWarn()
+
+    const composite = await exposed(wrapper).composeBeforeAfter(MALFORMED_URL, AFTER_URL)
+
+    // Not "did not throw": the actual value the signature promises.
+    expect(composite).toBeNull()
+    expectFailedAfterReachingTheLoad(wrapper, ctx)
+  })
+
+  it('returns null when the AFTER frame cannot be decoded', async () => {
+    const { wrapper, ctx } = await mountForCompose()
+    spyOnWarn()
+
+    const composite = await exposed(wrapper).composeBeforeAfter(BEFORE_URL, MALFORMED_URL)
+
+    expect(composite).toBeNull()
+    expectFailedAfterReachingTheLoad(wrapper, ctx)
+  })
+
+  it('reports the decode failure on the console instead of swallowing it silently', async () => {
+    const { wrapper } = await mountForCompose()
+    const warn = spyOnWarn()
+
+    await exposed(wrapper).composeBeforeAfter(MALFORMED_URL, AFTER_URL)
+
+    // A null with no trace would make a decode fault indistinguishable from a
+    // missing canvas. The underlying Error is what says which one happened.
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0][1]).toBeInstanceOf(Error)
+    expect((warn.mock.calls[0][1] as Error).message).toBe('Failed to load image data URL')
+  })
+
+  it('still composes normally when both frames decode — the failure path is not always-on', async () => {
+    const { wrapper, ctx } = await mountForCompose()
+
+    const composite = await exposed(wrapper).composeBeforeAfter(BEFORE_URL, AFTER_URL)
+
+    expect(composite).toBe(COMPOSITE_DATA_URL)
+    expect(ctx.drawImage).toHaveBeenCalledTimes(2)
   })
 })
