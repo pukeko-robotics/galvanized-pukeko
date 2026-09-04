@@ -136,6 +136,9 @@ importers:
       '@vue/language-core':
         specifier: ~3.1.5
         version: 3.1.8(typescript@5.9.3)
+      '@vue/test-utils':
+        specifier: ^2.4.11
+        version: 2.4.11(@vue/compiler-dom@3.5.38)(@vue/server-renderer@3.5.38(vue@3.5.38(typescript@5.9.3)))(vue@3.5.38(typescript@5.9.3))
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
