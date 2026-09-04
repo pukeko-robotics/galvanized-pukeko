@@ -145,13 +145,21 @@ defineExpose({
 
 <template>
   <div class="pk-webcam-panel">
+    <!--
+      The compositing canvas is an offscreen drawing surface, not part of the camera
+      view: it is never shown, it never reads the stream, and `composeBeforeAfter`
+      only ever draws two supplied data URLs onto it. It therefore sits OUTSIDE the
+      error/view branches so it exists whenever the component is mounted (RC-45).
+      Inside the `v-else` it was destroyed along with the video whenever getUserMedia
+      rejected, which broke compositing for the simulated, no-hardware path (RC-5).
+    -->
+    <canvas ref="canvasRef" style="display: none" />
     <div v-if="error" class="webcam-error">
       <p>{{ error }}</p>
       <button @click="startCamera">Retry</button>
     </div>
     <div v-else class="webcam-view">
       <video ref="videoRef" autoplay playsinline muted />
-      <canvas ref="canvasRef" style="display: none" />
       <div v-if="!isActive" class="webcam-loading">Connecting to camera...</div>
     </div>
   </div>
