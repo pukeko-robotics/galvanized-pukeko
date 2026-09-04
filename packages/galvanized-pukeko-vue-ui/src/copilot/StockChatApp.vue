@@ -7,10 +7,11 @@
  * AbstractAgent>`; with a local agent present no `runtimeUrl` is needed. We hand
  * it vue-ui's own {@link GauntSlothAgent} (PLAT-55) pointed at `config.agUiUrl`,
  * so CopilotKit speaks the same AG-UI / HTTP-SSE wire the bespoke UI uses AND
- * declares the same protocol level. It is still the exact `AbstractAgent` class
- * CopilotKit core expects: `@copilotkit/vue/v2` re-exports `@ag-ui/client`, and
- * since CopilotKit 1.70.0 pins the `0.0.59` vue-ui itself resolves, both import
- * paths reach one module instance — so the subclass passes CopilotKit's check.
+ * declares the same protocol level. It still derives from the exact
+ * `AbstractAgent` CopilotKit core expects: `@copilotkit/vue/v2` re-exports
+ * `@ag-ui/client`, and since CopilotKit 1.70.0 pins the `0.0.59` vue-ui itself
+ * resolves, both import paths reach one module instance — so there is a single
+ * class identity here rather than two. `gauntSlothAgent.spec.ts` asserts that.
  *
  * Increment 2 adds A2UI: {@link A2UIRenderToolBridge} registers a custom
  * renderer for our `show_a2ui_surface` tool so agent surfaces render inside the

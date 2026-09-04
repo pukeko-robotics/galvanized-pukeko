@@ -43,14 +43,19 @@ export const GAUNT_SLOTH_AG_UI_MAX_VERSION = '0.0.59'
  * that states the protocol level this client assumes.
  *
  * Both the bespoke surface (`chatService`) and the CopilotKit-mounted surfaces
- * (`StockChatApp`, `HeadlessChatApp`) use this class. That is safe because
- * `@copilotkit/vue/v2` re-exports `@ag-ui/client`'s own `HttpAgent` (`export *
- * from "@ag-ui/client"`) and, since CopilotKit 1.70.0 pins `@ag-ui/client` at
- * the same `0.0.59` vue-ui resolves, both import paths reach the SAME module
- * instance — so this subclass satisfies the `AbstractAgent` identity check
- * `CopilotKitProvider` performs on `selfManagedAgents`. The spec pins that
- * single-copy property, because it is a coincidence of two pins agreeing rather
- * than a guarantee.
+ * (`StockChatApp`, `HeadlessChatApp`) use this class. What is MEASURED is the
+ * precondition for that: `@copilotkit/vue/v2` re-exports `@ag-ui/client`'s own
+ * `HttpAgent` (`export * from "@ag-ui/client"`) and, since CopilotKit 1.70.0
+ * pins `@ag-ui/client` at the same `0.0.59` vue-ui resolves, both import paths
+ * reach the SAME module instance — so there is one `AbstractAgent` identity, not
+ * two. The spec pins that single-copy property, because it is a coincidence of
+ * two pins agreeing rather than a guarantee.
+ *
+ * Note the unit suite stubs `CopilotKitProvider`, so it does NOT exercise the
+ * real provider accepting this subclass; module identity is the evidence, and
+ * the node prescribed exactly that standard ("provable up front with a
+ * `require.resolve` on both import paths rather than by waiting for a runtime
+ * symptom").
  *
  * It deliberately imports only from `@ag-ui/client` (external to both builds),
  * never from `@copilotkit/vue`, so the core bundle stays free of the CopilotKit
