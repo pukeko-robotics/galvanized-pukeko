@@ -1,0 +1,63 @@
+{
+  // OPS-106 — this package's `e2e/` directory, which until now belonged to no
+  // type-check project at all.
+  //
+  // Three projects met around this directory and none of them reached it. The
+  // `tsconfig.json` beside this file is scoped to `src/**` and `env.d.ts`. The
+  // OPS-104 `tsconfig.tooling.json` beside it uses `include: ["*.config.ts"]`,
+  // which matches this package's top level and nothing below it. The repository
+  // root's `tsconfig.tooling.json` does carry an `e2e/**/*` glob, but a glob in
+  // a tsconfig is anchored at that file's own directory, so it selects the
+  // root's `e2e/` and never descends into a package's.
+  //
+  // WHY A THIRD PROJECT RATHER THAN A WIDER `include` ON THE TOOLING ONE. These
+  // files need a different compiler. `harness.ts` imports `.vue` single-file
+  // components directly and `theme.visual.spec.ts` pulls `harness.ts` in for its
+  // `Window` augmentation, so both need `vue-tsc` and the dom lib rather than
+  // plain `tsc` under the node22 base its siblings use. Added there they report
+  // TS2307 on the component imports instead of checking anything, and a gate
+  // that reports errors nobody can act on gets ignored and then disabled. Only
+  // `vite.harness.config.ts` would have fitted as-is, and splitting one file off
+  // from the two beside it buys a fragment rather than coverage.
+  //
+  // HOW IT REACHES THE GATE. This project is run by this package's `type-check`
+  // script, which its `build` script runs first, which `pnpm -r run build`
+  // reaches from the root `build` script, which is the Build step of
+  // unit-tests.yml. So it rides a gate that already runs on every push and adds
+  // no new required-check name for branch protection to learn. The wiring is the
+  // point, not the file: a project that merely exists, reachable by nothing,
+  // passes a green run while changing nothing — which is the failure this ticket
+  // exists to close, one directory further in.
+  //
+  // WHY IT LIVES INSIDE THE PACKAGE: the same constraint OPS-104 measured. These
+  // files resolve `vite`, `@vitejs/plugin-vue` and `@playwright/test` from THIS
+  // package's `node_modules`, so the program has to be rooted here to see them.
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+
+  // A glob, matching the choice the root's tooling project and OPS-104's argued
+  // for: the next spec or fixture added beside these is covered on the day it is
+  // added, not on the day someone remembers to extend a list.
+  "include": ["e2e/**/*"],
+
+  "compilerOptions": {
+    "noEmit": true,
+
+    // `vite/client` supplies the ambient `*.css` module declaration that
+    // `harness.ts`'s `import '../src/assets/global.css'` needs, and `node`
+    // supplies the `__dirname` that `vite.harness.config.ts` uses.
+    //
+    // DELIBERATELY NOT `env.d.ts`, which is where `src/` gets the same `vite/client`
+    // reference. That file also carries a `declare module '*.vue'` wildcard shim
+    // typed `DefineComponent<{}, {}, any>`. Under `vue-tsc` a real `.vue` file
+    // wins over the wildcard, so including it would probably be harmless — but
+    // "probably harmless" is the wrong standard for the one thing this project
+    // exists to check. If the shim ever did win, every component import here
+    // would degrade to `any`, `InstanceType<typeof ChatInterface>` would stop
+    // meaning anything, and this project would pass while checking nothing about
+    // the component boundary. That is precisely the defect OPS-106 fixes,
+    // recreated one layer down and much harder to see. Taking the css
+    // declaration from `vite/client` directly leaves no wildcard in the program
+    // at all, so the question cannot arise.
+    "types": ["node", "vite/client"]
+  }
+}

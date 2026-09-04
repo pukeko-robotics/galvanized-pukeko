@@ -18,11 +18,12 @@ name: Unit tests
 #      harnesses and the start-*.js launchers, none of which belonged to any
 #      project before
 #   2. vue-ui's build, which begins with its own `type-check` before the two
-#      bundler passes. That script is two projects: `vue-tsc` over `src/` and
-#      `env.d.ts`, then `tsc -p tsconfig.tooling.json` — the OPS-104 project
+#      bundler passes. That script is three projects: `vue-tsc` over `src/` and
+#      `env.d.ts`; then `tsc -p tsconfig.tooling.json` — the OPS-104 project
 #      covering that package's own vite.config.ts, vite.copilot.config.ts,
-#      vitest.config.ts and playwright.config.ts, which belonged to no project
-#      at all until it existed
+#      vitest.config.ts and playwright.config.ts; then `vue-tsc -p
+#      tsconfig.e2e.json` — the OPS-106 project covering that package's e2e/.
+#      Neither of the latter two belonged to any project at all until it existed
 #   3. web-client's build, which has always begun with `vue-tsc --build`
 #
 # So the Build step SUBSUMES all three type-check passes. Running `type-check` as
@@ -51,20 +52,9 @@ name: Unit tests
 #     a type error in them still does not. That boundary is deliberate and its
 #     measurement is recorded in that file. The five TypeScript files it covers
 #     are fully checked under `strict`.
-#   - vue-ui's e2e/ is in no project. The gap that used to be recorded here — the
-#     four config files inside that package — is closed: OPS-104 gave them their
-#     own tooling project, reached through the package's `type-check` and so
-#     through the Build step above, which is what makes a nonexistent plugin
-#     option fail this job rather than pass unread (OPS-91). Its e2e/ is not
-#     covered by that project or any other. e2e/harness.ts imports .vue
-#     single-file components directly and e2e/theme.visual.spec.ts pulls that
-#     file in, so both need vue-tsc and the dom lib rather than the node22
-#     project their siblings use — added to it they report TS2307 on the
-#     component imports instead of checking anything. Only
-#     e2e/vite.harness.config.ts would fit as-is. So that directory wants its own
-#     project, not a wider `include`. web-client has neither gap: its
-#     tsconfig.node.json covers vite.config.ts, vitest.config.ts and
-#     eslint.config.ts, and tsconfig.vitest.json covers its tests/.
+#     Inside the two workspace packages there is no such gap left: every
+#     TypeScript file in each belongs to one of their projects — vue-ui's src/,
+#     its four config files and its e2e/, web-client's src/, tests/ and configs.
 #   - examples/ and experiments/ are outside all of it. They sit outside the pnpm
 #     workspace, so `pnpm -r` never reaches them, and outside tsconfig.tooling.json,
 #     which is scoped to the root's own files. Two of them carry their own tsconfig
