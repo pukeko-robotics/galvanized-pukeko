@@ -1,8 +1,11 @@
 import { ref, type Ref } from 'vue'
 import { configService } from './configService'
-import { HttpAgent } from '@ag-ui/client'
+import type { HttpAgent } from '@ag-ui/client'
 import type { AgentSubscriber } from '@ag-ui/client'
 import type { Message, UserMessage, Tool } from '@ag-ui/client'
+// PLAT-55: every surface constructs the same subclass, so the AG-UI protocol
+// level this client declares is stated in exactly one place.
+import { GauntSlothAgent } from './gauntSlothAgent'
 
 // @ag-ui/client (>=0.0.54) stores the fetch impl as `this.fetch` and invokes it
 // as a method, which detaches the global `fetch` from its `window` receiver and
@@ -377,7 +380,7 @@ export class ChatService {
   private ensureAgent(): HttpAgent {
     if (!this.agent) {
       const config = configService.get()
-      this.agent = new HttpAgent({
+      this.agent = new GauntSlothAgent({
         url: config.agUiUrl,
         fetch: boundFetch,
       })
@@ -393,7 +396,7 @@ export class ChatService {
     // next sendMessage() re-arms the agent, so leaving it latched is safe.
     this.messageQueue = []
     const config = configService.get()
-    this.agent = new HttpAgent({
+    this.agent = new GauntSlothAgent({
       url: config.agUiUrl,
       fetch: boundFetch,
     })

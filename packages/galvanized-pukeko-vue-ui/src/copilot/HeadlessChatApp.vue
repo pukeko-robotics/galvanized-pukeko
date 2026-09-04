@@ -6,7 +6,12 @@
  * ours, driven by CopilotKit composables.
  */
 import { shallowRef } from 'vue'
-import { CopilotKitProvider, HttpAgent, type VueFrontendTool } from '@copilotkit/vue/v2'
+import { CopilotKitProvider, type VueFrontendTool } from '@copilotkit/vue/v2'
+// PLAT-55: the agent comes from vue-ui's own subclass rather than CopilotKit's
+// `HttpAgent` re-export, so this surface declares the same AG-UI protocol level
+// as the bespoke one. Same underlying class either way — CopilotKit 1.70.0 pins
+// the `@ag-ui/client` vue-ui already resolves.
+import { GauntSlothAgent } from '../services/gauntSlothAgent'
 import { configService } from '../services/configService'
 import HeadlessChat from './HeadlessChat.vue'
 import PkAppChrome from '../components/PkAppChrome.vue'
@@ -28,7 +33,7 @@ const props = withDefaults(
 )
 
 const url = props.agUiUrl || configService.get().agUiUrl
-const agent = shallowRef(new HttpAgent({ url }))
+const agent = shallowRef(new GauntSlothAgent({ url }))
 const selfManagedAgents = { default: agent.value }
 </script>
 
