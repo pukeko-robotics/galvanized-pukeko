@@ -296,7 +296,21 @@ function newConversation() {
             <div class="message-content">
               <template v-for="(part, i) in bubble.parts" :key="i">
                 <span v-if="part.kind === 'text'" class="text-part">{{ part.text }}</span>
-                <div v-else-if="part.kind === 'thinking'" class="thinking-part">{{ part.text }}</div>
+                <!--
+                  `isRunning` is load-bearing, not belt-and-braces: toBubbles
+                  folds a message LOG and so can never observe run end, leaving
+                  a turn whose last message is reasoning `done: false` forever.
+                  Keying the caret on `!part.done` alone would blink it for good
+                  after such a turn. The bespoke surface has no equivalent
+                  because it closes the part on REASONING_MESSAGE_END, and
+                  CopilotKit's own chat draws the same conclusion
+                  (`isStreaming = isRunning && isLatest`).
+                -->
+                <div
+                  v-else-if="part.kind === 'thinking'"
+                  class="thinking-part"
+                  :class="{ streaming: isRunning && !part.done }"
+                >{{ part.text }}</div>
                 <template v-else>
                   <ToolCallBadge :part="part" />
                   <!-- chat target: ephemeral inline surface, its own processor. -->
@@ -443,6 +457,18 @@ function newConversation() {
   color: var(--pk-color-text-dim, #9ca3af);
   white-space: pre-wrap;
   font-style: italic;
+}
+/* Bespoke-surface parity: a caret marks reasoning that is still arriving. */
+.thinking-part.streaming::after {
+  content: "▍";
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--pk-color-text-dim, #9ca3af);
+  animation: blink 0.7s infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 .error-banner {
   padding: 0.5rem 1rem;
