@@ -30,7 +30,7 @@
 //
 // Run: node scripts/check-harness-argv.mjs   (wired into "pnpm test")
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -179,24 +179,49 @@ okUnless(beforeShapes, 'argument handling over all argv shapes');
 }
 
 console.log('harness argv — wiring');
-
-// Every launcher that forwards arguments to Playwright. A new `it-*.js` harness belongs in this
-// list on the day it is added: the defect is not specific to any one of them, and all three had it.
-const HARNESSES = ['it-gth-ag-ui.js', 'it-koog.js', 'it-adk.js'];
-
-const WRAPPED_CALL = 'playwrightArgsFrom(process.argv.slice(2))';
 const beforeWiring = failures.length;
 
-for (const rel of HARNESSES) {
-  let code;
+// Every launcher that forwards arguments to Playwright — DISCOVERED, not listed. All three
+// existing harnesses had this defect, so a fourth will most likely be written the same way, and a
+// hand-maintained list would pass over it in silence: the failure mode of the bug itself. This is
+// the reasoning `tsconfig.tooling.json` already adopted for its `include` patterns — glob, so the
+// next `it-*.js` is covered on the day it is added rather than on the day someone remembers.
+const isHarness = (name) => /^it-.*\.js$/.test(name);
+const isLauncher = (name) => /^start-.*\.js$/.test(name);
+const rootFiles = readdirSync(ROOT).sort();
+const HARNESSES = rootFiles.filter(isHarness);
+
+// An enumeration that cannot match is indistinguishable from a clean result, so an empty one is a
+// failure rather than a quiet pass — the pattern itself is the thing being trusted here.
+if (HARNESSES.length === 0) {
+  fail(
+    `No it-*.js harness was found in ${ROOT}. Either they have been renamed or moved — in which ` +
+      `case this pattern must follow them — or this check has been silently testing nothing.`
+  );
+}
+
+const WRAPPED_CALL = 'playwrightArgsFrom(process.argv.slice(2))';
+
+/**
+ * A launcher's code with comments removed and whitespace flattened.
+ *
+ * Comments go first because all of these launchers now DISCUSS this separator in prose, and a
+ * search satisfied by a comment would pass against one that had stopped doing any of it.
+ * Whitespace is flattened so a reformat breaking a call across lines does not read as a launcher
+ * that stopped making it.
+ */
+function readCode(rel) {
   try {
-    // Comments out, then whitespace flattened so a reformat that breaks a call across lines does
-    // not read as a harness that stopped making it.
-    code = stripComments(readFileSync(resolve(ROOT, rel), 'utf8')).replace(/\s+/g, ' ');
+    return stripComments(readFileSync(resolve(ROOT, rel), 'utf8')).replace(/\s+/g, ' ');
   } catch (err) {
     fail(`${rel} could not be read, so its argument forwarding could not be checked: ${err.message}`);
-    continue;
+    return undefined;
   }
+}
+
+for (const rel of HARNESSES) {
+  const code = readCode(rel);
+  if (code === undefined) continue;
 
   const required = [
     ['harness-argv.mjs', 'does not import the shared argument handling'],
@@ -225,7 +250,29 @@ for (const rel of HARNESSES) {
   }
 }
 
-okUnless(beforeWiring, `${HARNESSES.length} harnesses route their argv through the shared handling`);
+// The interactive launchers take no Playwright arguments at all, which is why they are exempt from
+// everything above rather than merely untested. Stated as an assertion because the exemption is
+// only sound while it stays true: the day one of them starts reading its own argv to forward, it
+// inherits this defect, and the reader of that diff should be told here rather than discovering it
+// from a run that tested the wrong thing.
+for (const rel of rootFiles.filter(isLauncher)) {
+  const code = readCode(rel);
+  if (code === undefined) continue;
+  if (code.split(WRAPPED_CALL).join('').includes('process.argv.slice(2)')) {
+    fail(
+      `${rel} reads process.argv.slice(2) outside ${WRAPPED_CALL}. If it now forwards arguments to ` +
+        `Playwright it must route them through scripts/harness-argv.mjs, or the separator pnpm ` +
+        `inserts will silently discard everything after it. If it reads its arguments for some ` +
+        `other purpose, this check is the wrong shape and should be changed deliberately.`
+    );
+  }
+}
+
+okUnless(
+  beforeWiring,
+  `${HARNESSES.length} harnesses route their argv through the shared handling ` +
+    `(${HARNESSES.join(', ')})`
+);
 
 if (failures.length > 0) {
   console.error(`\nHarness argv check failed (${failures.length}):\n`);
