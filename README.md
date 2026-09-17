@@ -132,9 +132,9 @@ the public registry serves under it.
 ### Runs against a local model are serialised
 
 A local Ollama daemon is backed by one GPU, and one card holds one model at a time. When
-`it-gth-ag-ui` is pointed at a local model it takes a machine-wide lock first and waits its turn,
-so two such runs queue instead of thrashing each other's VRAM — which otherwise fails as a timeout
-that looks like the model, not like contention.
+`it-gth-ag-ui` or `it-koog` is pointed at a local model it takes a machine-wide lock first and
+waits its turn, so two such runs queue instead of thrashing each other's VRAM — which otherwise
+fails as a timeout that looks like the model, not like contention.
 
 The lock is a file in the system temp directory keyed by the daemon address, which is what lets it
 serialise runs in *other* repositories too: [Gaunt Sloth](https://github.com/pukeko-robotics/gaunt-sloth)'s
@@ -142,6 +142,12 @@ integration harness takes the same file. The two are independent implementations
 path and a file format rather than sharing code, because neither publishes the helper the other
 would import. `scripts/ollama-gpu-lock.mjs` holds that contract and the reasoning; `pnpm test`
 checks it still holds.
+
+The Koog example's server is a JVM process and names its daemon with a different variable
+(`OLLAMA_BASE_URL`) and a different spelling of the loopback address, which would key a second,
+unshared lockfile for the very same daemon. So `it-koog` resolves the address itself, locks on it,
+and passes that same string to the server — the address locked and the address dialled are one
+value rather than two defaults that have to keep agreeing.
 
 Runs against a hosted provider are not locked — there is no card to contend for. Neither are the
 interactive `start-*` launchers, whose sessions are open-ended.

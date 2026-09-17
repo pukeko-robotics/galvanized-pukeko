@@ -14,6 +14,13 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
 import { playwrightArgsFrom, separatorNotice } from './scripts/harness-argv.mjs';
+import {
+  KOOG_OLLAMA_URL_ENV_VAR,
+  createOllamaLock,
+  defaultLockPath,
+  isLocalGpuProvider,
+  resolveKoogOllamaBaseUrl,
+} from './scripts/ollama-gpu-lock.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -49,6 +56,12 @@ const LLM_PROVIDER = process.env.LLM_PROVIDER || 'google';
 // alias always resolves to a live model. Override with GOOGLE_MODEL. KoogAgent's own committed
 // default (gemini-2.5-flash) is left untouched for the published demo.
 const GOOGLE_MODEL = process.env.GOOGLE_MODEL || 'gemini-flash-lite-latest';
+// OPS-119 — the Ollama daemon this run will drive, resolved ONCE. It is both the lock key below
+// and the value handed to the JVM in startKoogAgent(), so the address that is locked and the
+// address that is dialled cannot drift apart. Resolved unconditionally (it costs nothing) but only
+// USED when the provider is a local-GPU one. See scripts/ollama-gpu-lock.mjs for the precedence and
+// for why the Kotlin default is deliberately not the one that wins.
+const OLLAMA_BASE_URL = resolveKoogOllamaBaseUrl(process.env);
 
 function startKoogAgent() {
   const logPath = resolve(__dirname, 'it-koog-java.log');
@@ -75,6 +88,12 @@ function startKoogAgent() {
         JAVA_HOME,
         LLM_PROVIDER,
         GOOGLE_MODEL,
+        // OPS-119 — inject the SAME string the lock was keyed on. KoogAgent.kt would otherwise
+        // fall back to its own committed default, `http://localhost:11434`, which denotes this
+        // very daemon and hashes to a different lockfile — so the server would drive the card
+        // this run only believes it has exclusive use of. Passing it makes the locked address and
+        // the dialled address one value rather than two defaults that happen to agree.
+        [KOOG_OLLAMA_URL_ENV_VAR]: OLLAMA_BASE_URL,
         AGUI_PORT: String(AGUI_PORT),
       },
     }
@@ -114,6 +133,25 @@ function killGroup(proc) {
 // after it. Stripped here and announced; scripts/harness-argv.mjs holds the reasoning.
 const { args: playwrightArgs, separatorStripped } = playwrightArgsFrom(process.argv.slice(2));
 if (separatorStripped) console.log(separatorNotice(playwrightArgs));
+
+// OPS-119 — serialise this run against every other run driving the same Ollama daemon: the other
+// harness in this repository, and Gaunt Sloth's integration harness in its own repository. The lock
+// is a file keyed by the daemon address, so separate implementations exclude each other; see
+// scripts/ollama-gpu-lock.mjs for the contract and why it is not a shared import.
+//
+// Taken ONLY when this run will actually drive the local card. The default provider here is
+// `google`, a hosted API with no card to contend for, and locking it would queue a Gemini run
+// behind an Ollama one for nothing.
+//
+// Taken BEFORE the server and the web client start, so a run that has to wait is holding no
+// processes open while it waits, and released from a single 'exit' hook, which covers the normal
+// path, the abort path and both signal handlers below (each of which ends in process.exit).
+if (isLocalGpuProvider(LLM_PROVIDER)) {
+  const lock = createOllamaLock({ lockPath: defaultLockPath(OLLAMA_BASE_URL) });
+  const release = await lock.acquire(); // blocks until acquired, or throws loud at the deadline
+  process.on('exit', release);
+  console.log(`==> ollama GPU lock acquired for ${OLLAMA_BASE_URL} (${lock.lockPath})`);
+}
 
 const koogProc = startKoogAgent();
 

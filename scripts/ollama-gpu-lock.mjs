@@ -94,6 +94,74 @@ export function resolveOllamaHost(env = process.env) {
 }
 
 /**
+ * The environment variable the Koog example's JVM server reads to find its Ollama daemon.
+ *
+ * It is NOT `OLLAMA_HOST`. `KoogAgent.kt` reads `OLLAMA_BASE_URL` and hands it straight to
+ * `OllamaClient(baseUrl = …)`, so the two surfaces in this repository name the same daemon with
+ * two different variables. That is why the resolution below reads both.
+ */
+export const KOOG_OLLAMA_URL_ENV_VAR = 'OLLAMA_BASE_URL';
+
+/**
+ * OPS-119 — the daemon address a Koog run will DIAL, which is also the string it keys its lock on.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM `resolveOllamaHost`. The Koog server is a JVM process, and its
+ * committed default daemon address is `http://localhost:11434` while every JavaScript participant
+ * here defaults to `http://127.0.0.1:11434`. Those are one daemon and two strings, so they hash to
+ * two lockfiles and would not exclude each other. They also read different variables, so pointing
+ * one at another machine does not move the other.
+ *
+ * WHAT MAKES THE KEY CORRECT, AND IT IS NOT A NORMALISER. `it-koog.js` calls this ONCE, locks on
+ * the result, and injects that same result into the JVM's environment as `OLLAMA_BASE_URL`. The
+ * address that was locked and the address that is dialled are therefore the SAME STRING by
+ * construction — one derivation, not two formulas that have to agree. A canonicaliser would be the
+ * more principled-looking choice and would buy less: it would put a second hand-maintained
+ * agreement (lowercasing, port defaulting, loopback collapsing, IPv6) in two repositories and
+ * would still leave the JVM free to resolve its own address from its own variable.
+ *
+ * PRECEDENCE, and it is a behaviour statement rather than an implementation detail:
+ *
+ *   1. `OLLAMA_BASE_URL` — the variable the Koog example documents in its README, so a developer
+ *      who set it meant the Koog server specifically.
+ *   2. `OLLAMA_HOST` — the variable every JavaScript participant here and in Gaunt Sloth already
+ *      keys on. Honouring it is what makes `OLLAMA_HOST=…` move this harness's daemon AND its lock
+ *      to the same place as a `gth` run, instead of leaving Koog behind on loopback.
+ *   3. {@link DEFAULT_OLLAMA_HOST} — deliberately the JavaScript default, NOT `KoogAgent.kt`'s
+ *      `http://localhost:11434`. Defaulting to the Kotlin spelling would reinstate the split this
+ *      function exists to close; injecting the JavaScript one is what puts an unconfigured Koog
+ *      run on the same lockfile as an unconfigured `gth` run.
+ *
+ * Setting both variables to different daemons means the injected one wins and the Koog server
+ * never sees `OLLAMA_HOST`. That is the documented knob taking precedence, not a lock defect.
+ *
+ * NO SCHEME IS SYNTHESISED, deliberately. A bare `host:port` in `OLLAMA_HOST` is passed through
+ * exactly as given, for the reason spelled out on `resolveOllamaHost` above: prefixing `http://`
+ * here would key this harness on a different string from Gaunt Sloth's `it.js`, and two runs would
+ * proceed at once against one card. The cost is that Koog would be handed a base URL its HTTP
+ * client may refuse — which fails loudly in the harness log, whereas a broken rendezvous fails
+ * silently. Loud is the right side of that trade for a lock.
+ *
+ * Trailing slashes are stripped, matching `resolveOllamaHost`, so `…:11434` and `…:11434/` are one
+ * lock rather than two.
+ */
+export function resolveKoogOllamaBaseUrl(env = process.env) {
+  const configured = env[KOOG_OLLAMA_URL_ENV_VAR] || env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST;
+  return configured.replace(/\/+$/, '');
+}
+
+/**
+ * Does `provider` name a run that will drive the local GPU?
+ *
+ * Lowercased before the comparison because `KoogAgent.kt` routes on
+ * `System.getenv("LLM_PROVIDER")?.lowercase()`. A raw `includes` would let `LLM_PROVIDER=Ollama`
+ * start a real Ollama run that took no lock — the gate and the thing it gates must agree on case,
+ * or the gate is open for exactly the spellings nobody tests.
+ */
+export function isLocalGpuProvider(provider) {
+  return LOCAL_GPU_PROVIDERS.includes(String(provider ?? '').toLowerCase());
+}
+
+/**
  * Path of the lockfile for a given daemon address.
  *
  * Keyed by host so two genuinely different daemons do not block each other, while everything

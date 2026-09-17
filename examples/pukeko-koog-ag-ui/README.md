@@ -76,9 +76,17 @@ real encoder with a deterministic stub agent (no live LLM), asserting canonical
 | `LLM_PROVIDER`   | `openai`                  | `openai` or `ollama`                     |
 | `OPENAI_API_KEY` | —                         | required for the OpenAI path             |
 | `OPENAI_MODEL`   | `gpt-4o-mini`             | any OpenAI chat model id                 |
-| `OLLAMA_BASE_URL`| `http://localhost:11434`  | Ollama server                            |
+| `OLLAMA_BASE_URL`| `http://localhost:11434`  | Ollama server (see below)                |
 | `OLLAMA_MODEL`   | `granite4.1:3b`           | Ollama model id                          |
 | `AGUI_PORT`/`PORT`| `3000`                   | server port                              |
+
+The `OLLAMA_BASE_URL` default above applies when the server is started directly (`./gradlew run`,
+`node start.js`). Under the `it-koog` harness it is always set explicitly, to `OLLAMA_BASE_URL` if
+you exported one, else `OLLAMA_HOST`, else `http://127.0.0.1:11434`. That harness takes a
+machine-wide GPU lock keyed on the same string it passes here, so a local-model run queues behind
+any other run driving that daemon — including one in another repository. Keying on `localhost`
+while everything else keys on `127.0.0.1` would name one daemon with two lockfiles and serialise
+nothing, which is why the harness resolves the address once instead of letting each side default.
 
 ## Web client (optional, end-to-end)
 
