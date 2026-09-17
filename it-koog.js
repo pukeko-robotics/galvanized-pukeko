@@ -2,7 +2,10 @@
 // Koog AG-UI example integration test: boot the Koog Ktor server + the vue web client, then run
 // the Playwright e2e (examples/pukeko-koog-ag-ui) against the live pair. Mirrors it-adk.js.
 //
-// Usage:  LLM_PROVIDER=google JAVA_HOME=/usr/lib/jvm/java-21-openjdk node it-koog.js [-- playwright args]
+// Usage:  LLM_PROVIDER=google JAVA_HOME=/usr/lib/jvm/java-21-openjdk node it-koog.js [playwright args]
+//         pnpm run it-koog -- [playwright args]
+// Both spellings forward their arguments: the leading `--` pnpm inserts is removed here, and the
+// run says so when it does — see scripts/harness-argv.mjs for why that token cannot be passed on.
 // The LLM runs through Google AI Studio (GOOGLE_API_KEY, gemini-2.5-flash) by default.
 import { spawn } from 'child_process';
 import { createInterface } from 'readline';
@@ -10,6 +13,7 @@ import { createWriteStream, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
+import { playwrightArgsFrom, separatorNotice } from './scripts/harness-argv.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -106,7 +110,10 @@ function killGroup(proc) {
   try { process.kill(-proc.pid, 'SIGTERM'); } catch { /* already gone */ }
 }
 
-const playwrightArgs = process.argv.slice(2);
+// QA-34 — a leading `--` is pnpm's, not the caller's, and Playwright would discard everything
+// after it. Stripped here and announced; scripts/harness-argv.mjs holds the reasoning.
+const { args: playwrightArgs, separatorStripped } = playwrightArgsFrom(process.argv.slice(2));
+if (separatorStripped) console.log(separatorNotice(playwrightArgs));
 
 const koogProc = startKoogAgent();
 

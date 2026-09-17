@@ -1,10 +1,19 @@
 #!/usr/bin/env node
+// ADK AG-UI example integration test: boot the ADK agent + the vue web client, then run the
+// Playwright e2e against the live pair.
+//
+// Usage:  node it-adk.js [playwright args]
+//         pnpm run it-adk -- [playwright args]
+//
+// Both spellings forward their arguments: the leading `--` pnpm inserts is removed here, and the
+// run says so when it does — see scripts/harness-argv.mjs for why that token cannot be passed on.
 import { spawn } from 'child_process';
 import { createInterface } from 'readline';
 import { createWriteStream, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
+import { playwrightArgsFrom, separatorNotice } from './scripts/harness-argv.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -107,7 +116,10 @@ function killGroup(proc) {
   try { process.kill(-proc.pid, 'SIGTERM'); } catch { /* already gone */ }
 }
 
-const playwrightArgs = process.argv.slice(2);
+// QA-34 — a leading `--` is pnpm's, not the caller's, and Playwright would discard everything
+// after it. Stripped here and announced; scripts/harness-argv.mjs holds the reasoning.
+const { args: playwrightArgs, separatorStripped } = playwrightArgsFrom(process.argv.slice(2));
+if (separatorStripped) console.log(separatorNotice(playwrightArgs));
 
 const { proc: adkProc, ready: adkReady } = startAdkAgent();
 

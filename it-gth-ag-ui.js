@@ -1,4 +1,16 @@
 #!/usr/bin/env node
+// Gaunt Sloth AG-UI example integration test: boot the gaunt-sloth AG-UI server + the vue web
+// client, then run the Playwright e2e against the live pair.
+//
+// Usage:  node it-gth-ag-ui.js [playwright args]
+//         pnpm run it-gth-ag-ui -- [playwright args]
+//
+// Both spellings forward their arguments — `pnpm run … -- --grep "capture_image"` runs what it
+// says. The leading `--` pnpm inserts is removed here, and the run says so when it does; see
+// scripts/harness-argv.mjs for why that token cannot simply be passed on.
+//
+// GTH_LLM_PROVIDER selects which shipped configuration the server runs (see
+// scripts/llm-config.mjs); unset means the documented fallback, which needs an OPENAI_API_KEY.
 import { spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { resolve, dirname } from 'path';
@@ -17,6 +29,7 @@ import {
   resolveOllamaHost,
 } from './scripts/ollama-gpu-lock.mjs';
 import { DEFAULT_REPORT_PATH, reportFirstAttemptRate } from './scripts/first-attempt-rate.mjs';
+import { playwrightArgsFrom, separatorNotice } from './scripts/harness-argv.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -130,7 +143,10 @@ function killGroup(proc) {
   try { process.kill(-proc.pid, 'SIGTERM'); } catch { /* already gone */ }
 }
 
-const playwrightArgs = process.argv.slice(2);
+// QA-34 — a leading `--` is pnpm's, not the caller's, and Playwright would discard everything
+// after it. Stripped here and announced; scripts/harness-argv.mjs holds the reasoning.
+const { args: playwrightArgs, separatorStripped } = playwrightArgsFrom(process.argv.slice(2));
+if (separatorStripped) console.log(separatorNotice(playwrightArgs));
 
 // OPS-118 — serialise this run against every other run driving the same Ollama daemon, including
 // Gaunt Sloth's own integration harness in its own repository. The lock is a file keyed by the
