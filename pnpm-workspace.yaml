@@ -15,6 +15,15 @@ packages:
 # cache key, so where this lockfile is already verified the check is skipped and
 # an install exits 0 in about 200 ms having checked nothing. It starts biting
 # when the lockfile next changes.
+#
+# The window is 1440 minutes — the 24 hours the remedies above name. It is
+# written out rather than left to pnpm's default because that default is
+# undocumented: measured on pnpm 11.3.0 (the version `packageManager` pins
+# here), an absent value enforced this very same 24-hour cutoff, so this line
+# changes nothing today, and a future pnpm that moved its default could not
+# silently falsify the 24 hours promised above. Two careful readers had already
+# taken the missing value for a window of length zero (OPS-128).
+minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
 
 # These are packages we publish ourselves, so they are listed bare (OPS-115): a
