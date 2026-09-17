@@ -64,7 +64,7 @@
   "dependencies": {
     "@ag-ui/client": "^0.0.59",
     "chart.js": "^4.5.1",
-    "vue": "^3.5.42"
+    "vue": "^3.5.12"
   },
   "peerDependencies": {
     "@copilotkit/vue": "^1.70.0",
