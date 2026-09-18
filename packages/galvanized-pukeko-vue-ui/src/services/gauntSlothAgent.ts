@@ -24,7 +24,7 @@ import { HttpAgent } from '@ag-ui/client'
  * a module-level constant.
  *
  * WHY 0.0.59. It is the AG-UI level of the gaunt-sloth release this repo
- * targets: `@gaunt-sloth/agent@2.0.0-beta.6` depends on `@ag-ui/core` and
+ * targets: `@gaunt-sloth/agent@2.0.0-beta.13` depends on `@ag-ui/core` and
  * `@ag-ui/encoder` at `^0.0.59`. `gauntSlothAgent.spec.ts` asserts that
  * correspondence against the installed manifest, so bumping the gaunt-sloth pin
  * without revisiting this line fails the suite instead of drifting silently.
