@@ -6,6 +6,9 @@ import type { Message, UserMessage, Tool } from '@ag-ui/client'
 // PLAT-55: every surface constructs the same subclass, so the AG-UI protocol
 // level this client declares is stated in exactly one place.
 import { GauntSlothAgent } from './gauntSlothAgent'
+// RC-68: the shared reading of an AG-UI CUSTOM event, and the argued decision
+// about what happens to one this client does not know.
+import { readCustomEvent, type ContextFold, type SeenCustomNames } from './contextCompaction'
 
 // @ag-ui/client (>=0.0.54) stores the fetch impl as `this.fetch` and invokes it
 // as a method, which detaches the global `fetch` from its `window` receiver and
@@ -28,6 +31,12 @@ function setRunState(state: RunState, text: string): void {
 export type MessagePart =
   | { kind: 'text'; text: string }
   | { kind: 'thinking'; text: string; done: boolean }
+  // RC-68: the conversation was folded HERE, mid-turn. A part rather than a
+  // message of its own, because the fold happens inside one assistant turn and
+  // its position within that turn is the whole of what it tells the reader:
+  // the text above it was written with the full history behind it, the text
+  // below it with a summary standing in for the older messages.
+  | { kind: 'fold'; fold: ContextFold }
   | {
       kind: 'tool-call'
       toolCallId: string
@@ -92,6 +101,9 @@ export interface SendMessageOptions {
 function buildSubscriber(callbacks: ChatCallbacks): AgentSubscriber {
   const toolCallBuffers = new Map<string, string>()
   const toolCallNames = new Map<string, string>()
+  // RC-68: unknown CUSTOM names already reported on this run. Per-subscriber,
+  // so a fresh run reports again rather than inheriting another run's silence.
+  const seenCustomNames: SeenCustomNames = new Set<string>()
 
   let currentMsg: AssistantStreamingMessage = { id: '', parts: [], done: false }
   let currentTextPart: { kind: 'text'; text: string } | null = null
@@ -120,6 +132,38 @@ function buildSubscriber(callbacks: ChatCallbacks): AgentSubscriber {
       currentThinkingPart = null
       setRunState('waiting', 'Waiting for model…')
       callbacks.onRunStart?.(event.runId)
+    },
+    /**
+     * RC-68 — AG-UI's extension point, and the one event this client used to
+     * throw away. Before this handler existed the subscriber simply had no
+     * `onCustomEvent`, so `@ag-ui/client` called nothing (`r.onCustomEvent?.(…)`)
+     * and a `context_compacted` frame reached the browser and vanished.
+     *
+     * The only name known here is `context_compacted`: the server folded the
+     * older conversation into a summary mid-turn and is asking the model again.
+     * What happens to a name this client does NOT know — and why — is argued
+     * once, at {@link readCustomEvent}.
+     */
+    onCustomEvent({ event }) {
+      const fold = readCustomEvent(event, { surface: 'ChatService', seen: seenCustomNames })
+      if (!fold) return
+      // The fold routinely arrives BEFORE the turn's first token: the trigger
+      // is the provider rejecting the request for size, so on a first-attempt
+      // rejection nothing has streamed yet and `currentMsg.id` is still ''.
+      // Claim an id now, or the next TEXT_MESSAGE_START adopts a different one
+      // and `upsertAssistantMessage` opens a SECOND bubble — rendering the
+      // marker twice.
+      if (!currentMsg.id) currentMsg.id = crypto.randomUUID()
+      // The server closes any open text run and reasoning message before
+      // sending this, and what follows is a new message. Mirror that here so
+      // the continued answer starts a fresh part below the marker.
+      currentTextPart = null
+      if (currentThinkingPart) {
+        currentThinkingPart.done = true
+        currentThinkingPart = null
+      }
+      currentMsg.parts.push({ kind: 'fold', fold })
+      emit()
     },
     onTextMessageStartEvent({ event }) {
       if (!currentMsg.id) currentMsg.id = event.messageId

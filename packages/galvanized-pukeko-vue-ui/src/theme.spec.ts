@@ -35,12 +35,11 @@ const globalCss = readFileSync(`${import.meta.dirname}/assets/global.css`, 'utf8
 // `Record<string, string>` — the same shape the old static `?raw` imports gave
 // us — so nothing downstream in this file needs to change.
 //
-// Scoped to `./components/**/*.vue` and `./copilot/**/*.vue` (matching where
-// the four currently-migrated SFCs live: `components/ChatInterface.vue`,
-// `copilot/HeadlessChat.vue`, `components/ToolCallBadge.vue`,
-// `components/ToolResultGeneric.vue`) rather than all of `src/**/*.vue`, so the
-// glob can't accidentally sweep in test fixtures or unrelated components
-// outside the theming surface.
+// Scoped to `./components/**/*.vue` and `./copilot/**/*.vue` — the two
+// directories the migrated SFCs live in — rather than all of `src/**/*.vue`, so
+// the glob can't accidentally sweep in test fixtures or unrelated components
+// outside the theming surface. The set itself is pinned below rather than
+// counted here, so adding a tokenised component updates one place.
 const globbedVueSources: Record<string, string> = {
   ...import.meta.glob<string>('./components/**/*.vue', {
     query: '?raw',
@@ -129,6 +128,8 @@ describe('theme: MIGRATED discovery (glob-based, not a hardcoded allowlist)', ()
         'CaptureImageResult.vue',
         'ChatInterface.vue',
         'HeadlessChat.vue',
+        // RC-68: the shared context-fold marker, tokenised from the start.
+        'PkContextFoldNotice.vue',
         'ToolCallBadge.vue',
         'ToolResultGeneric.vue',
       ].sort(),

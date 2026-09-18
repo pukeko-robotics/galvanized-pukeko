@@ -48,6 +48,26 @@ export {
 export { runState, statusText, chatService } from './services/chatService'
 export type { RunState, Message, Tool, UserMessage, ToolCallPart } from './services/chatService'
 
+// RC-68: the context-fold marker — the AG-UI `CUSTOM` event gaunt-sloth emits
+// when it folds the conversation mid-turn, the shared reading of it, and the
+// component both surfaces draw it with. Re-exported from `./copilot` too, so a
+// consumer of either entry can render or reason about a fold.
+export {
+  AGUI_CONTEXT_COMPACTED_EVENT,
+  CONTEXT_FOLD_FALLBACK_TITLE,
+  describeContextFold,
+  readCustomEvent,
+} from './services/contextCompaction'
+export type {
+  ContextFold,
+  ContextCompactedValue,
+  ContextCompactedNotice,
+  ConversationCompaction,
+  ConversationSize,
+  SeenCustomNames,
+} from './services/contextCompaction'
+export { default as PkContextFoldNotice } from './components/PkContextFoldNotice.vue'
+
 // Shared `capture_image` client tool (PLAT-18): the generic single-frame webcam
 // capture layer — declaration, capture-to-envelope handler, and capture-source
 // helpers — registerable on the bespoke ChatInterface path via

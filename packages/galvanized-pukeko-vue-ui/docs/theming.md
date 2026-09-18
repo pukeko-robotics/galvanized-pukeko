@@ -114,8 +114,11 @@ The equivalent pure-CSS form is the same five variables set under `:root`.
   so overriding the token re-themes the component; the default in the fallback means the library looks
   identical if you never set a token (including from the `./copilot` bundle, which doesn't ship the
   base stylesheet).
-- **Migrated in this release:** the primary chat surfaces (`ChatInterface`, `HeadlessChat`,
-  `ToolCallBadge`, `ToolResultGeneric`). Form controls / buttons / inputs still read the pre-existing
-  `--grey-*` / `--bg-button-*` / `--border-input-*` layer in `global.css`; folding those into the
-  semantic `--pk-color-*` tokens is an incremental follow-up. `PkLogoLarge` is fixed-palette artwork
-  and is intentionally not tokenised.
+- **Migrated:** the chat surfaces and what they render inline — `ChatInterface`, `HeadlessChat`,
+  `ToolCallBadge`, `ToolResultGeneric`, `CaptureImageResult` and `PkContextFoldNotice`. Form controls /
+  buttons / inputs still read the pre-existing `--grey-*` / `--bg-button-*` / `--border-input-*` layer
+  in `global.css`; folding those into the semantic `--pk-color-*` tokens is an incremental follow-up.
+  `PkLogoLarge` is fixed-palette artwork and is intentionally not tokenised. `theme.spec.ts` finds
+  this set by scanning the component sources for `--pk-color-*`, so a newly tokenised component has
+  its fallbacks checked against `defaultTheme` whether or not anyone remembered it; membership is
+  then pinned there by hand, so adding one means naming it in that assertion and in this list.

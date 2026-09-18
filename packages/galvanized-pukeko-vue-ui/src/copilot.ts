@@ -26,7 +26,26 @@ export {
 }
 export type { UiMode, A2UITarget } from './copilot/types'
 export { toBubbles } from './copilot/useHeadlessChat'
-export type { ChatBubble, AgentMessageLike } from './copilot/useHeadlessChat'
+export type { ChatBubble, AgentMessageLike, ContextFoldMarker } from './copilot/useHeadlessChat'
+
+// RC-68: the context-fold marker. Re-exported here as well as from the library
+// root so a copilot-only consumer can position a fold in a log of its own
+// (`toBubbles`' second argument) and draw it with the shared component.
+export {
+  AGUI_CONTEXT_COMPACTED_EVENT,
+  CONTEXT_FOLD_FALLBACK_TITLE,
+  describeContextFold,
+  readCustomEvent,
+} from './services/contextCompaction'
+export type {
+  ContextFold,
+  ContextCompactedValue,
+  ContextCompactedNotice,
+  ConversationCompaction,
+  ConversationSize,
+  SeenCustomNames,
+} from './services/contextCompaction'
+export { default as PkContextFoldNotice } from './components/PkContextFoldNotice.vue'
 
 // Shared `capture_image` client tool, CopilotKit registration (PLAT-18/PLAT-29):
 // build the CopilotKit frontend tool and pass it via the `frontendTools` prop of

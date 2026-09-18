@@ -16,6 +16,7 @@
  * resume, abort) is owned by CopilotKit core.
  */
 import type { MessagePart } from '../services/chatService'
+import type { ContextFold } from '../services/contextCompaction'
 
 /**
  * An agent message as it appears on `AbstractAgent.messages`.
@@ -38,6 +39,34 @@ export interface AgentMessageLike {
 export type ChatBubble =
   | { kind: 'user'; id: string; text: string }
   | { kind: 'assistant'; id: string; parts: MessagePart[] }
+  // RC-68: the conversation was folded at this point in the stream.
+  | { kind: 'fold'; id: string; fold: ContextFold }
+
+/**
+ * RC-68 — one context fold, positioned in a message LOG.
+ *
+ * The bespoke surface can hold the fold as a part of the turn it interrupted,
+ * because it builds the turn from the event stream and the event arrives inside
+ * it. This surface cannot: a `CUSTOM` event is not a message and never enters
+ * `agent.messages` (measured against `@ag-ui/client` 0.0.59 — the log is the
+ * same length before, during and after the event), so `toBubbles` cannot see it
+ * at all. The position therefore has to be carried alongside the log.
+ *
+ * It is carried as a COUNT and not as the id of the message it followed.
+ * `toBubbles` does not emit one bubble per message — a `tool` message emits
+ * none, reasoning may still be held open, and reasoning merges into the
+ * assistant bubble of its turn — so anchoring to a message id means a fold
+ * whose anchor emitted no bubble has nowhere to land, and it would be dropped:
+ * the exact failure this node exists to fix. A count always falls between two
+ * messages, so every fold lands somewhere.
+ */
+export interface ContextFoldMarker {
+  /** Stable key for the emitted bubble. */
+  id: string
+  /** `messages.length` when the event arrived — the fold's place in the log. */
+  afterMessageCount: number
+  fold: ContextFold
+}
 
 function parseArgs(raw: string): { args: unknown; argsRaw: string } {
   try {
@@ -66,8 +95,15 @@ function parseArgs(raw: string): { args: unknown; argsRaw: string } {
  * on. The message log cannot observe REASONING_MESSAGE_END, so the rule here is
  * that anything appearing after a reasoning message closes it, and only the
  * last message in the log can leave one open.
+ *
+ * RC-68: `folds` are context-fold markers to splice into the stream at the
+ * position each was recorded at (see {@link ContextFoldMarker}). They live
+ * outside the message log because the event that produces them never enters it.
  */
-export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble[] {
+export function toBubbles(
+  messages: ReadonlyArray<AgentMessageLike>,
+  folds: ReadonlyArray<ContextFoldMarker> = [],
+): ChatBubble[] {
   const bubbles: ChatBubble[] = []
   // toolCallId -> the tool-call part, so a later `tool` message can fill result.
   const toolPartIndex = new Map<string, Extract<MessagePart, { kind: 'tool-call' }>>()
@@ -90,7 +126,25 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
     openThinkingId = null
   }
 
-  for (const m of messages) {
+  // RC-68: folds in position order. `sort` is stable, so two folds recorded at
+  // the same count keep the order they arrived in.
+  const pendingFolds = [...folds].sort((a, b) => a.afterMessageCount - b.afterMessageCount)
+  let nextFold = 0
+
+  /** Emit every fold recorded at or before `count` consumed messages. */
+  function flushFoldsThrough(count: number): void {
+    while (nextFold < pendingFolds.length && pendingFolds[nextFold].afterMessageCount <= count) {
+      const marker = pendingFolds[nextFold]
+      nextFold += 1
+      // The server ends any open reasoning before it sends the fold, so
+      // thinking held at this point belongs above the marker, not below it.
+      closeThinking()
+      flushThinking()
+      bubbles.push({ kind: 'fold', id: marker.id, fold: marker.fold })
+    }
+  }
+
+  function consume(m: AgentMessageLike): void {
     if (m.role === 'reasoning') {
       // A new reasoning message means the previous one finished.
       closeThinking()
@@ -101,7 +155,7 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
       }
       openThinking.push(part)
       openThinkingId ??= m.id
-      continue
+      return
     }
 
     if (m.role === 'user') {
@@ -110,7 +164,7 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
       // Skip the serialized-A2UI-action messages from cluttering the transcript?
       // Keep them visible — they're genuine user turns.
       bubbles.push({ kind: 'user', id: m.id, text: m.content ?? '' })
-      continue
+      return
     }
 
     if (m.role === 'assistant') {
@@ -138,7 +192,7 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
         openThinking = []
         openThinkingId = null
       }
-      continue
+      return
     }
 
     if (m.role === 'tool' && m.toolCallId) {
@@ -151,9 +205,21 @@ export function toBubbles(messages: ReadonlyArray<AgentMessageLike>): ChatBubble
     // system/developer messages are not rendered.
   }
 
+  // A fold recorded against an empty log belongs before everything.
+  flushFoldsThrough(0)
+  for (let i = 0; i < messages.length; i++) {
+    consume(messages[i])
+    flushFoldsThrough(i + 1)
+  }
+
   // Reasoning that is still streaming (or that ended the log) has no assistant
   // message to join yet — show it, still open, so thinking is visible live.
   flushThinking()
+
+  // Any fold recorded past the end of the log — the event arrived before the
+  // message that follows it was recorded, which is the ordinary case while a
+  // turn is still streaming. It still belongs on screen, at the end.
+  flushFoldsThrough(Number.POSITIVE_INFINITY)
 
   return bubbles
 }

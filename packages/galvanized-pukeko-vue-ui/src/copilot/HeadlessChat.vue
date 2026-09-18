@@ -40,11 +40,13 @@ import PkButton from '../components/PkButton.vue'
 import PkNewConversationButton from '../components/PkNewConversationButton.vue'
 import PkLogoLarge from '../components/PkLogoLarge.vue'
 import ToolCallBadge from '../components/ToolCallBadge.vue'
+import PkContextFoldNotice from '../components/PkContextFoldNotice.vue'
 import A2UIToolSurface from '../components/a2ui/A2UIToolSurface.vue'
 import A2UISurface from '../components/a2ui/A2UISurface.vue'
 import { useA2UI, buildUserAction, parseA2UIJsonl, type UserAction } from '../composables/useA2UI'
 import type { MessagePart } from '../services/chatService'
-import { toBubbles, type AgentMessageLike } from './useHeadlessChat'
+import { readCustomEvent, type SeenCustomNames } from '../services/contextCompaction'
+import { toBubbles, type AgentMessageLike, type ContextFoldMarker } from './useHeadlessChat'
 import type { A2UITarget } from './types'
 
 const props = withDefaults(
@@ -60,8 +62,22 @@ const sending = ref(false)
 const errorText = ref<string | null>(null)
 const messagesEl = ref<HTMLElement | null>(null)
 
+/**
+ * RC-68 — context folds observed on this thread, in arrival order.
+ *
+ * Kept HERE and not in `agent.messages`: the fold is announced as an AG-UI
+ * `CUSTOM` event precisely so it does NOT reach the client's message history,
+ * because anything in that history is replayed to the model on the next turn as
+ * the assistant's own words. The same reason the greeting below is a UI-only
+ * empty state rather than an injected message.
+ */
+const contextFolds = ref<ContextFoldMarker[]>([])
+
 const bubbles = computed(() =>
-  toBubbles((agent.value?.messages ?? []) as ReadonlyArray<AgentMessageLike>),
+  toBubbles(
+    (agent.value?.messages ?? []) as ReadonlyArray<AgentMessageLike>,
+    contextFolds.value,
+  ),
 )
 
 const isRunning = computed(() => sending.value || agent.value?.isRunning === true)
@@ -96,6 +112,9 @@ function isAbortSignal(message: string | undefined, name?: string): boolean {
   if (name === 'AbortError') return true
   return !!message && ABORT_SIGNAL_MESSAGES.some((m) => message.includes(m))
 }
+// RC-68: unknown CUSTOM names already reported by this component.
+const seenCustomNames: SeenCustomNames = new Set<string>()
+
 watch(
   () => agent.value,
   (a, _prev, onCleanup) => {
@@ -109,6 +128,27 @@ watch(
         if (isAbortSignal(error?.message, error?.name)) return
         errorText.value = error?.message ? String(error.message) : 'Agent run failed'
         console.error('[HeadlessChat] Run failed:', error)
+      },
+      // RC-68: the context fold. This subscription is the ONLY place this
+      // surface can learn of it — a `CUSTOM` event is not a message and adds
+      // nothing to `agent.messages`, so `toBubbles`, which folds that log, can
+      // never see one. Record where in the log it landed and hand the marker to
+      // `toBubbles` alongside the messages. What happens to a CUSTOM name this
+      // client does not know — and why — is argued at `readCustomEvent`.
+      onCustomEvent: ({ event, messages }) => {
+        const fold = readCustomEvent(event, {
+          surface: 'HeadlessChat',
+          seen: seenCustomNames,
+        })
+        if (!fold) return
+        contextFolds.value = [
+          ...contextFolds.value,
+          {
+            id: `fold-${crypto.randomUUID()}`,
+            afterMessageCount: messages?.length ?? 0,
+            fold,
+          },
+        ]
       },
     })
     if (sub) onCleanup(() => sub.unsubscribe())
@@ -261,6 +301,10 @@ function newConversation() {
   sending.value = false
   errorText.value = null
   agent.value?.setMessages([])
+  // RC-68: the fold markers belong to the conversation that was folded, and are
+  // not bubble-derived either — clearing the message log would leave them
+  // stranded at the top of an empty thread.
+  contextFolds.value = []
   // PLAT-21: reset the shared panel surface + its feed-dedupe (not bubble-derived).
   panelA2ui.clearSurfaces()
   fedToolCallIds.clear()
@@ -292,6 +336,19 @@ function newConversation() {
           <div v-if="bubble.kind === 'user'" class="message user" data-testid="pk-headless-user">
             <div class="message-content">{{ bubble.text }}</div>
           </div>
+          <!--
+            RC-68: the context-fold marker, at the point in the log where the
+            fold was recorded. A bubble of its own rather than a part, because
+            this surface builds bubbles from a message LOG and the fold is not
+            in it — see ContextFoldMarker.
+          -->
+          <div
+            v-else-if="bubble.kind === 'fold'"
+            class="message fold"
+            data-testid="pk-headless-fold"
+          >
+            <PkContextFoldNotice :fold="bubble.fold" />
+          </div>
           <div v-else class="message ai" data-testid="pk-headless-assistant">
             <div class="message-content">
               <template v-for="(part, i) in bubble.parts" :key="i">
@@ -311,6 +368,16 @@ function newConversation() {
                   class="thinking-part"
                   :class="{ streaming: isRunning && !part.done }"
                 >{{ part.text }}</div>
+                <!--
+                  A fold part reaches this surface only if a future caller hands
+                  `toBubbles` a log that already carries one; it is rendered
+                  rather than left to the catch-all below, which would draw it
+                  as a broken tool badge.
+                -->
+                <PkContextFoldNotice
+                  v-else-if="part.kind === 'fold'"
+                  :fold="part.fold"
+                />
                 <template v-else>
                   <ToolCallBadge :part="part" />
                   <!-- chat target: ephemeral inline surface, its own processor. -->
@@ -430,6 +497,12 @@ function newConversation() {
 }
 .message.ai {
   align-self: flex-start;
+}
+/* RC-68: the fold marker spans the column — it is a line drawn across the
+   conversation at the point of the cut, not a turn taken by either side. */
+.message.fold {
+  align-self: stretch;
+  max-width: 100%;
 }
 .message-content {
   padding: 0.75rem 1rem;

@@ -4,6 +4,7 @@ import PkButton from './PkButton.vue'
 import PkInput from './PkInput.vue'
 import PkNewConversationButton from './PkNewConversationButton.vue'
 import PkProgressBar from './PkProgressBar.vue'
+import PkContextFoldNotice from './PkContextFoldNotice.vue'
 import ToolCallBadge from './ToolCallBadge.vue'
 import {attachToolResult, chatService, runState, statusText} from '../services/chatService'
 import type {
@@ -326,6 +327,17 @@ defineExpose({
                 class="thinking-part"
                 :class="{ streaming: !part.done }"
               >{{ part.text }}</div>
+              <!--
+                RC-68: the context-fold marker, inline where the cut happened.
+                An EXPLICIT branch and not the `v-else` below it: that `v-else`
+                is a catch-all that renders whatever is left as a tool call, so
+                a part kind added without a branch here does not go missing —
+                it renders as a broken tool badge.
+              -->
+              <PkContextFoldNotice
+                v-else-if="part.kind === 'fold'"
+                :fold="part.fold"
+              />
               <ToolCallBadge v-else :part="part" />
             </template>
             <span v-if="!item.done" class="typing-indicator"></span>
