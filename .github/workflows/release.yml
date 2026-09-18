@@ -208,7 +208,7 @@ jobs:
           ref: main
           fetch-depth: 0
           # Push the post-bump commit as a Deploy Key, not as github-actions[bot].
-          # main's ruleset requires the "Lint and unit tests (24.x)" check on the
+          # main's ruleset requires the "Lint and unit tests" check on the
           # pushed commit, and a commit this job just created can never already have
           # one — a structural deadlock, and the publish above has already happened
           # by the time it bites. github-actions[bot] is not a bypass actor; the
