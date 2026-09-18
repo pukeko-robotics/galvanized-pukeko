@@ -15,8 +15,8 @@ importers:
   .:
     dependencies:
       '@gaunt-sloth/agent':
-        specifier: 2.0.0-beta.7
-        version: 2.0.0-beta.7(@bufbuild/protobuf@2.15.0)(@cfworker/json-schema@4.1.1)(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)
+        specifier: 2.0.0-beta.13
+        version: 2.0.0-beta.13(@bufbuild/protobuf@2.15.0)(@cfworker/json-schema@4.1.1)(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)
       '@langchain/ollama':
         specifier: ^1.3.0
         version: 1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))
@@ -509,21 +509,21 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@gaunt-sloth/agent@2.0.0-beta.7':
-    resolution: {integrity: sha512-LVZKgfzc6xHy3MTZMIGaftR+LtwZRRqaB2w2cSBxi9D0XtAEmFz/78bCOSWm7U+ILjGsNa/UYCF9znCSZamZ3g==}
+  '@gaunt-sloth/agent@2.0.0-beta.13':
+    resolution: {integrity: sha512-DqQpnKIs5Zx8RG5eR4RExyHcb16tsC5haNQe/R7re5pDslOWCrDnHzKYsGq5cT6ewi73RTTmO5kCWKR5/uqgHg==}
     hasBin: true
 
-  '@gaunt-sloth/core@2.0.0-beta.7':
-    resolution: {integrity: sha512-OHxm0UygouhbBnq/zwiX7RGH97wPyShnn6VDms5B/XLKrDeqU9ObZkyuk7WI90w/SVjtT6U5IeOxH/ZuPyBDNg==}
+  '@gaunt-sloth/core@2.0.0-beta.13':
+    resolution: {integrity: sha512-js5YN0RFzrYJci5rvxhdEUdibWd0vY5bt/esa89XNZeMai4HP37iNEAFMl8Ks8cKgOQHjIrX4rT8KG4WaPIgtg==}
     peerDependencies:
-      '@langchain/anthropic': ^1.5.0
-      '@langchain/deepseek': ^1.1.1
-      '@langchain/google': ^0.2.0
-      '@langchain/groq': ^1.3.0
+      '@langchain/anthropic': ^1.5.10
+      '@langchain/deepseek': ^1.1.13
+      '@langchain/google': ^0.2.6
+      '@langchain/groq': ^1.3.1
       '@langchain/ollama': ^1.3.0
-      '@langchain/openai': ^1.5.1
-      '@langchain/openrouter': ^0.4.5
-      '@langchain/xai': ^1.4.1
+      '@langchain/openai': ^1.5.13
+      '@langchain/openrouter': ^0.4.13
+      '@langchain/xai': ^1.4.13
     peerDependenciesMeta:
       '@langchain/anthropic':
         optional: true
@@ -4007,13 +4007,13 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@gaunt-sloth/agent@2.0.0-beta.7(@bufbuild/protobuf@2.15.0)(@cfworker/json-schema@4.1.1)(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)':
+  '@gaunt-sloth/agent@2.0.0-beta.13(@bufbuild/protobuf@2.15.0)(@cfworker/json-schema@4.1.1)(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)':
     dependencies:
       '@a2a-js/sdk': 1.1.0(@bufbuild/protobuf@2.15.0)(express@5.2.1)
       '@ag-ui/core': 0.0.59
       '@ag-ui/encoder': 0.0.59
       '@agentclientprotocol/sdk': 1.4.0(zod@4.6.5)
-      '@gaunt-sloth/core': 2.0.0-beta.7(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)
+      '@gaunt-sloth/core': 2.0.0-beta.13(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)
       '@langchain/core': 1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)
       '@langchain/langgraph': 1.4.15(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(zod@3.25.76)
       '@langchain/mcp-adapters': 1.1.4(@cfworker/json-schema@4.1.1)(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(@langchain/langgraph@1.4.15(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(zod@4.6.5))
@@ -4045,7 +4045,7 @@ snapshots:
       - supports-color
       - ws
 
-  '@gaunt-sloth/core@2.0.0-beta.7(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)':
+  '@gaunt-sloth/core@2.0.0-beta.13(@langchain/ollama@1.3.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)))(@langchain/openai@1.5.13(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(undici@8.10.2)(ws@8.21.3))(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)':
     dependencies:
       '@langchain/core': 1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3)
       '@langchain/langgraph': 1.4.15(@langchain/core@1.2.11(openai@7.15.0(undici@8.10.2)(ws@8.21.3)(zod@3.25.76))(ws@8.21.3))(zod@4.6.5)

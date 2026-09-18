@@ -7,24 +7,23 @@
 //
 // WHY SELECTION AND NOT INTERPOLATION. A Gaunt Sloth JSON config has no environment
 // interpolation, so `"type": "${GTH_LLM_PROVIDER}"` is not a thing that resolves. The other
-// option is a `.gsloth.config.js` module config whose `configure()` reads `process.env`. That
-// route does work at the pinned `@gaunt-sloth/agent` — but only if `configure()` returns an
-// already-BUILT model instance, and only on a machine with no global config. Both caveats fail
-// silently, which is why this example does not rely on it:
+// option is a `.gsloth.config.js` module config whose `configure()` reads `process.env`.
 //
-//   - Returning a raw `{ type, model }` spec does NOT work: the module branch never provider-
-//     routes, so the spec arrives as a plain object with no `invoke`. Only the JSON branch routes
-//     it. (Filed as CFG-71.)
-//   - Returning a built instance works until the developer has a `~/.gsloth/.gsloth.config.json`.
-//     A global config is deep-merged UNDER the project layer, and that merge walks the built
-//     model into a plain object — prototype gone, `invoke` gone. The JSON branch is immune
-//     because it constructs the model AFTER the merge rather than before it.
+// That route carried two silent failure modes up to and including `2.0.0-beta.7`, and they are
+// history rather than a live reason to avoid it — CFG-71 fixed both in Gaunt Sloth, and the
+// version pinned here carries the fix:
 //
-// Neither failure raises; both hand the server an `llm` that is a plain object. Selecting between
-// declarative JSON files keeps the model construction on the branch that gth itself routes and
-// merges correctly, needs no `@gaunt-sloth/core` dependency here, and leaves two files a reviewer
-// can read and diff. That is the reason — simplicity and a path with no silent failure mode, not
-// an inability to express it any other way.
+//   - A returned raw `{ type, model }` spec was never provider-routed, so it arrived as a plain
+//     object with no `invoke`. The module branch now routes it the way the JSON branch does.
+//   - A returned built instance was flattened into a plain object — prototype gone, `invoke`
+//     gone — once the developer had a `~/.gsloth/.gsloth.config.json`, because the global layer
+//     is deep-merged UNDER the project layer. The merge now recurses into plain objects only and
+//     hands an instance over whole.
+//
+// This example still selects between declarative JSON files, for the two reasons that never
+// depended on those defects: it needs no `@gaunt-sloth/core` dependency here, and it leaves two
+// files a reviewer can read and diff. That is the reason — simplicity, not an inability to
+// express it any other way.
 //
 // Adding a provider is dropping a `.gsloth.config.<provider>.json` next to the others — the
 // resolution below is by convention, so nothing here needs editing. It does need that provider's

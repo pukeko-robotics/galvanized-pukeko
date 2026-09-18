@@ -101,21 +101,18 @@ A Gaunt Sloth JSON config has no environment interpolation, so the provider cann
 inside `.gsloth.config.json`.
 
 The alternative is a `.gsloth.config.js` module config whose `configure()` reads the environment.
-That does work at the pinned `@gaunt-sloth/agent`, but only under two conditions that are easy to
-break and that fail without an error message:
+Up to and including `2.0.0-beta.7` that route carried two silent failure modes, both fixed in Gaunt
+Sloth under CFG-71 and both absent from the version pinned here:
 
-- `configure()` must return an **already-built model instance**. Returning a raw `{ type, model }`
-  spec does not work — the module branch never provider-routes, so the spec arrives as a plain
-  object with no `invoke`, while the JSON branch routes the identical block correctly.
-- The developer must have **no global `~/.gsloth/.gsloth.config.json`**. A global config is
-  deep-merged underneath the project layer, and that merge walks a built model into a plain object,
-  losing its prototype. The JSON branch is unaffected because it builds the model after the merge
-  rather than before it.
+- Returning a raw `{ type, model }` spec was never provider-routed, so it arrived as a plain object
+  with no `invoke` while the JSON branch routed the identical block correctly.
+- Returning an already-built model instance was flattened once the developer had a global
+  `~/.gsloth/.gsloth.config.json`, because the global layer is deep-merged underneath the project
+  layer and that merge walked the instance into a plain object, losing its prototype.
 
-Both failures hand the server an `llm` that is a plain object rather than raising, so the symptom
-appears later and elsewhere. Selecting between declarative JSON files keeps model construction on
-the branch Gaunt Sloth itself routes and merges, needs no `@gaunt-sloth/core` dependency here, and
-leaves two short files a reviewer can read and diff. See `scripts/llm-config.mjs`.
+This example still selects between declarative JSON files, for the reasons that never depended on
+those defects: it needs no `@gaunt-sloth/core` dependency here, and it leaves two short files a
+reviewer can read and diff. See `scripts/llm-config.mjs`.
 
 ### Ports
 
