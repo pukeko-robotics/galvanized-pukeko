@@ -91,17 +91,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      matrix:
-        node-version: [24.x]
+    # THE NODE VERSION IS PINNED DIRECTLY, NOT THROUGH A MATRIX. GitHub appends a
+    # matrix value to the job's name even when the job declares its own `name:`,
+    # so a one-entry `strategy.matrix.node-version` would publish this check as
+    # "Lint and unit tests (24.x)". Branch protection matches that string
+    # literally: bumping the version would rename the required check, and the
+    # ruleset would be left naming a context that no longer runs. Adding a matrix
+    # here is therefore a change to the required checks on this repo's ruleset as
+    # well, and the two have to happen together.
+    env:
+      NODE_VERSION: 24.x
     steps:
       - uses: actions/checkout@v6
       - name: Enable Corepack
         run: corepack enable
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
