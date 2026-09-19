@@ -13,6 +13,7 @@ import { createWriteStream, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
+import { DEFAULT_REPORT_PATH, reportFirstAttemptRate } from './scripts/first-attempt-rate.mjs';
 import { playwrightArgsFrom, separatorNotice } from './scripts/harness-argv.mjs';
 import {
   KOOG_OLLAMA_URL_ENV_VAR,
@@ -189,6 +190,24 @@ try {
     testProc.on('close', res);
     testProc.on('error', err => { console.error(`Playwright: ${err.message}`); res(1); });
   });
+
+  // QA-38 — print the FIRST-ATTEMPT pass rate, as the other two harnesses do. With retries in the
+  // example's config a cell that failed and then passed is reported flaky and the run still exits
+  // 0, so the exit code alone cannot show a live defect a retry absorbed.
+  //
+  // READ FROM THE EXAMPLE'S OWN REPORT, NOT THE ROOT ONE. This harness runs Playwright with the
+  // example directory as its cwd, so the example's config governs and its json reporter writes
+  // beside it. Pointing this at the repository root would find the file the OTHER harnesses write
+  // and print a confident rate computed over somebody else's run — worse than no rate at all,
+  // because nothing in the output would say which suite it described.
+  try {
+    const { lines } = reportFirstAttemptRate(resolve(KOOG_EXAMPLE_DIR, DEFAULT_REPORT_PATH));
+    console.log(`\n${lines.join('\n')}`);
+  } catch (err) {
+    // Loud rather than silent: a missing report is the facility being broken, and an absent
+    // rate must never read as a clean one.
+    console.warn(`\nWARNING: first-attempt rate unavailable — ${err.message}`);
+  }
 } catch (err) {
   console.error(`\nAborted: ${err.message}`);
 } finally {

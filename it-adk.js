@@ -13,6 +13,7 @@ import { createWriteStream, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { resolveLocalBinOrExit, spawnLocalBin } from './scripts/local-bin.mjs';
+import { DEFAULT_REPORT_PATH, reportFirstAttemptRate } from './scripts/first-attempt-rate.mjs';
 import { playwrightArgsFrom, separatorNotice } from './scripts/harness-argv.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -155,6 +156,22 @@ try {
     testProc.on('close', resolve);
     testProc.on('error', err => { console.error(`Playwright: ${err.message}`); resolve(1); });
   });
+
+  // QA-38 — print the FIRST-ATTEMPT pass rate, as it-gth-ag-ui.js does. This harness ran for a
+  // whole release cycle without one, and nothing noticed: the rate is the number every flake
+  // adjudication on this repository turns on, and a harness that reports only pass/fail cannot
+  // distinguish a suite that went green first time from one that needed three retries. The exit
+  // code is deliberately left alone — the suite's verdict is the suite's to give, and retries are
+  // legitimate for genuinely ambient flakiness. What was missing was the number, not a stricter
+  // gate. Playwright runs here with this directory as its cwd, so the report is the ROOT config's.
+  try {
+    const { lines } = reportFirstAttemptRate(resolve(__dirname, DEFAULT_REPORT_PATH));
+    console.log(`\n${lines.join('\n')}`);
+  } catch (err) {
+    // Loud rather than silent: a missing report is the facility being broken, and an absent
+    // rate must never read as a clean one.
+    console.warn(`\nWARNING: first-attempt rate unavailable — ${err.message}`);
+  }
 } catch (err) {
   console.error(`\nAborted: ${err.message}`);
 } finally {

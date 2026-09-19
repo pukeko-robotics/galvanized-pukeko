@@ -62,7 +62,25 @@ export default defineConfig({
     // Keep the basename `playwright-report`: `scripts/check-no-bare-launchers.mjs` skips
     // directories by BASENAME, and a name outside that list sends its walker into live Playwright
     // output, whose text contains the one-shot-runner token it greps for.
-    reporter: [['list'], ['html', { open: 'never', outputFolder: './playwright-report' }]],
+    reporter: [
+        ['list'],
+        ['html', { open: 'never', outputFolder: './playwright-report' }],
+        // QA-38 — machine-readable results so the FIRST-ATTEMPT pass rate is recoverable from a
+        // run of this example, the way it already is from the root harnesses. `retries: 3` above
+        // means a cell that failed and then passed is reported flaky and the run still exits 0,
+        // so the exit code cannot show a live defect that a retry absorbed. `it-koog.js` reads
+        // this file at the end of its run and scripts/check-first-attempt-rate.mjs pins it here.
+        //
+        // THE PATH IS RELATIVE TO THIS CONFIG'S DIRECTORY, not to the repository root: an
+        // explicit `outputFile` is resolved against the config directory, unlike the `outputDir`
+        // and `outputFolder` above, whose absence would send them walking up for a `package.json`
+        // and out of this example entirely. So this writes beside the example that produced it,
+        // and cannot collide with the root config's report of the same name.
+        //
+        // Written at the END of a run, so the pre-run clear of `outputDir` above does not remove
+        // it — the root config has had the same two keys pointing into one directory since QA-30.
+        ['json', { outputFile: 'test-results/results.json' }],
+    ],
     use: {
         // OPS-8: track the shifted vite port (WEB_PORT); it-koog.js loads `.env`.
         baseURL: `http://localhost:${process.env.WEB_PORT || 5555}`,
