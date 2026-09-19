@@ -109,6 +109,20 @@ const ALLOWED = [
     path: 'packages/galvanized-pukeko-agent-adk/src/main/resources/pukeko-defaults.properties',
     reason: 'commented-out example of a user-supplied MCP stdio command',
   },
+
+  // The web client's build, vendored into the ADK package by `pnpm run vendor:adk`.
+  // This guard already skips `dist/`, `build/` and `target/`; this is the same
+  // bundler output living under a resources path, and the walker cannot tell that
+  // from a name. A CopilotKit chunk inside it prints a one-shot-runner onboarding
+  // hint to a developer's browser console — third-party minified payload, not a
+  // command this repository runs, and nothing in a browser bundle can reach a
+  // shell here. What matters is that the exemption buys no blind spot: every
+  // source this directory is generated FROM is scanned by this same walk, and
+  // scripts/check-vendored-bundle.mjs fails when the two disagree.
+  {
+    path: 'packages/galvanized-pukeko-agent-adk/src/main/resources/browser/',
+    reason: 'vendored web-client build output; its sources are scanned instead',
+  },
 ];
 
 function isAllowed(rel) {

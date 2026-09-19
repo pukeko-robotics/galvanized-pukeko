@@ -1,0 +1,1 @@
+import{t as e}from"./CoreApp-Dzcgq4Us.js";import{E as t,H as n,g as r,l as i}from"./index--OV2QxOT.js";var a=r({__name:`App`,setup(r){return(r,a)=>(t(),i(n(e)))}});export{a as default};

@@ -9,6 +9,7 @@
     "build": "pnpm run type-check && pnpm run build-only",
     "preview": "vite preview",
     "build-only": "vite build",
+    "deploy-to-adk": "bash ./deploy-to-adk.sh",
     "type-check": "vue-tsc --build",
     "lint:oxlint": "oxlint . --fix -D correctness --ignore-path .gitignore",
     "lint:eslint": "eslint . --fix",

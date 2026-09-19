@@ -4,8 +4,10 @@ name: Unit tests
 # request, and is also the reusable body that release.yml calls as its gate 1, so
 # the release pipeline and the push path can never test different things.
 #
-# `pnpm test` here is three chained steps, in this order:
-#   1. scripts/check-no-bare-launchers.mjs — the QA-19 one-shot-package-runner guard
+# `pnpm test` here is three kinds of step chained in this order:
+#   1. the scripts/check-*.mjs guards, starting with the QA-19 one-shot-package-runner
+#      guard and ending with the OPS-141 vendored-bundle staleness gate. They are
+#      cheap file reads, so they run before anything that installs or compiles
 #   2. pnpm run lint  — the OPS-52 repository-scoped oxlint pass, which also covers
 #      the root-level harnesses, e2e/ and scripts/ that no workspace-scoped script
 #      reaches
@@ -65,8 +67,10 @@ name: Unit tests
 #   - No end-to-end tests. The Koog and ADK Playwright suites are gate 2 of
 #     release.yml and stay commented out there.
 #   - No Java or Kotlin. The agent-adk package is outside the pnpm workspace, so
-#     `pnpm -r run test` never reaches it; only the oxlint pass looks at that tree
-#     at all, and only at its non-Java files.
+#     `pnpm -r run test` never reaches it. Two things look at that tree at all: the
+#     oxlint pass, at its non-Java files minus the vendored browser bundle it
+#     ignores, and the OPS-141 guard, which checks that bundle against the sources
+#     it was built from without reading any Java.
 #
 # WHY THE E2E HALF IS NOT ON THIS TRIGGER. It is not merely that a booted stack is
 # expensive. A pull request from a fork gets a read-only token and no repository

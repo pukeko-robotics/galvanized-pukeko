@@ -119,8 +119,8 @@ pnpm run start-adk      # ADK agent on :8080 + web client dev server on :5555
 pnpm run it-adk         # ADK end-to-end tests (add it-adk-headed for a visible browser)
 ```
 
-After changing the Vue UI, rebuild and re-embed the client with `./deploy-to-adk.sh` (see
-[Web Client Integration](#web-client-integration)).
+After changing the Vue UI, rebuild and re-embed the client with `pnpm run vendor:adk` from the
+repository root (see [Web Client Integration](#web-client-integration)).
 
 ## Configuration
 
@@ -316,14 +316,21 @@ Display tabular data.
 
 The application serves a built Vue.js web client from `src/main/resources/browser/`.
 
-To update the web client after making changes:
+That directory is a checked-in build output: no Maven phase produces it, the root lint ignores
+it, and this package declares no test script. Re-vendor it from the repository root after any
+change to the Vue UI or the web client:
 
 ```bash
-cd ../galvanized-pukeko-web-client
-./deploy-to-adk.sh
+pnpm run vendor:adk
 ```
 
-This builds the web client and copies artifacts to this package's resources directory.
+This builds the web client, copies the artifacts into this package's resources directory, and
+records what they were built from in `browser-bundle.provenance.json`. Commit the regenerated
+directory and that file together.
+
+`pnpm test` runs `scripts/check-vendored-bundle.mjs`, which compares the recorded provenance
+against the current sources and against the directory itself, so a bundle left behind by a UI
+change fails CI instead of shipping in the jar.
 
 ## Development
 
