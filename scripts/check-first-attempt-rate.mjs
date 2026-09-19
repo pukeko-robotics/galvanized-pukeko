@@ -27,10 +27,23 @@
 //      `it-*.js` pattern and each is required to report — a hand-maintained list would be a second
 //      copy of the population, and the fourth harness would be the one nobody checked.
 //
-// The pins are on the FACILITY, not on the numbers: the budget's value is a decision to be made
-// from measurement and re-made when the measurement changes, so this guard checks that the config
-// states one at all rather than which one. Removing the reporter, renaming its output file,
-// deleting the `timeout` key, or dropping the call from any harness all fail here.
+// THE PINS ARE ON THE FACILITY, WITH ONE DELIBERATE EXCEPTION. Removing the reporter, renaming its
+// output file, deleting a `timeout` key, or dropping the call from any harness all fail here — that
+// is the facility, and it is most of what this file does.
+//
+// The exception is the KOOG example's `timeout`, whose exact VALUE is pinned (QA-43). The two
+// configs are guarded differently because they have different defects, and the difference is a
+// decision rather than an inconsistency:
+//
+//   - The ROOT config's defect was an ABSENT key, so presence is what has to hold there. Its
+//     150 000 ms is measured too, and nothing below asserts which number it is — that is on record
+//     as a choice, not an omission, and it is not a claim that presence is enough everywhere.
+//   - The KOOG config's defect is a SILENT LOWERING: a key edited down does not fail where it was
+//     edited, it fails later on someone else's branch as a cell that times out, which reads as
+//     ambient flakiness and gets absorbed by the known-flakes register. Presence cannot see that at
+//     all. Pinning the value does also red on a legitimate, deliberately re-measured number, and
+//     that is the point rather than the cost — it is the one moment the person changing it is
+//     already looking at it and can be told where the old number came from.
 //
 // WHAT A SOURCE SCAN CANNOT SEE, stated so nobody reads more into a green run than is there. The
 // harness section reads text, because what it is checking is not reachable by importing the
@@ -306,9 +319,10 @@ check('the start-*.js launchers still run no Playwright, so they have no rate to
 // the enumeration above is not one: a new harness is required to report, and one reading a report
 // nothing writes says so on every run it makes.
 const KOOG_CONFIG = 'examples/pukeko-koog-ag-ui/playwright.config.ts';
+// Read ONCE, at module scope, for both checks below — the same shape as the root config above.
+const koogConfig = readFileSync(join(REPO_ROOT, KOOG_CONFIG), 'utf8');
 
 check(`${KOOG_CONFIG} declares the json reporter at the pinned path`, () => {
-  const koogConfig = readFileSync(join(REPO_ROOT, KOOG_CONFIG), 'utf8');
   if (!koogConfig.includes("'json'")) {
     throw new Error(
       'the json reporter is gone from the koog example config, so nothing writes the report ' +
@@ -318,6 +332,80 @@ check(`${KOOG_CONFIG} declares the json reporter at the pinned path`, () => {
   if (!koogConfig.includes(DEFAULT_REPORT_PATH)) {
     throw new Error(
       `the koog example no longer writes ${DEFAULT_REPORT_PATH}, which is where it-koog.js looks`
+    );
+  }
+});
+
+// QA-43 — THE MEASURED TEST BUDGET, pinned by VALUE and not merely by presence. See the exception
+// paragraph in this file's header for why this config is guarded differently from the root one.
+//
+// THE SURVEY THAT PRECEDED THIS ASSERTION, written down because an absent search and an empty one
+// read identically later. Every config tracked in this repository was enumerated from `git ls-files`
+// rather than a bare `grep` — `grep` here honours `.gitignore`, so a zero could have meant filtered
+// rather than absent — and each was read for a constant arrived at by measurement:
+//
+//   - `playwright.config.ts` (root): `timeout: 150_000`, measured (QA-30, the sum of the per-step
+//     budgets of the longest test in `e2e/chat-gth-headless.spec.ts` plus slack). Guarded for
+//     PRESENCE ONLY, deliberately, per the header. The only other measured-and-value-unpinned
+//     constant in the repository.
+//   - `examples/adk-ui-agent-to-adk-agent/playwright.config.ts`: states NO `timeout` at all. That is
+//     the same defect QA-37 fixed here, and it is left open on purpose: QA-39 ruled it "cannot be
+//     sized here" — sizing it honestly needs Maven, both ADK agents, an AI Studio key, and it runs
+//     into the A2A :8082 NPE that OPS-23 and BE-6 record. A number chosen without samples is exactly
+//     what QA-37 exists to prevent. Carried forward as an ADJUDICATED GAP, which is a different
+//     answer from "it is fine" — do not read the absence of an assertion here as the latter.
+//   - `packages/galvanized-pukeko-vue-ui/playwright.config.ts`: its `webServer.timeout: 30_000` is a
+//     dev-server boot tolerance with a stated rationale and no sample count, and its visual specs
+//     state no per-assertion budget at all, so the absent test `timeout` there is not the QA-30
+//     defect. Not measured; nothing to pin.
+//   - The three `testTimeout: 10000` vitest configs (web-client, demo-mcp, ui-mcp-server-js): one
+//     round number repeated verbatim in three files, with no measurement recorded anywhere.
+//   - The vite configs and the root `it-*.js` / `start-*.js` launchers: NONE. Their numbers are
+//     ports, poll intervals and boot-readiness tolerances — the koog one says "be generous" in its
+//     own comment — not measurements.
+//
+// The koog spec's own per-step budgets (`ECHO_MS`, `ANSWER_STARTS_MS`, `REPLY_TEXT_MS`, `ERROR_MS`)
+// are the measured numbers this 50 000 is a sum of, and are left unpinned on purpose: each sits
+// directly beneath the sample count that justifies it, so anyone changing one is already reading its
+// measurement. This number is the one that is far from its justification, which is what earns it a
+// guard.
+const KOOG_TIMEOUT_MS = 50_000;
+
+/**
+ * A millisecond figure written the way this repository's configs and nodes write one — `50 000`,
+ * not `50000`. Interpolated rather than spelled out in the prose below, so a re-measurement that
+ * updates the constant cannot leave a message quoting the number it replaced; grouped so the
+ * message still matches what someone searching for the measurement will have read.
+ */
+function grouped(n) {
+  return n.toLocaleString('en-US').replaceAll(',', ' ');
+}
+
+check(`${KOOG_CONFIG} states the measured test timeout, at its measured value`, () => {
+  const stated = /^\s*timeout:\s*([\d_]+)\s*,/m.exec(koogConfig);
+  if (!stated) {
+    throw new Error(
+      'no explicit `timeout` in the koog example config — every cell there falls back to ' +
+        "Playwright's 30 000 ms default, while e2e-tests/chat.spec.ts states per-step budgets " +
+        'summing to 38 000 ms that it can then never be given, and a test dying at 30 000 tells ' +
+        `its reader the wrong number. The key stated ${grouped(KOOG_TIMEOUT_MS)} ms, which QA-37 ` +
+        'derived from 45 samples — 40 warm and 5 cold — against this harness and no other, so it ' +
+        'would stop being copied from the ADK example. If you are re-measuring it, write the new ' +
+        'number into the config AND into KOOG_TIMEOUT_MS in this file, in the same change. ' +
+        'Removing this assertion instead is the ordinary way a pin like this dies.'
+    );
+  }
+  const ms = Number(stated[1].replace(/_/g, ''));
+  if (ms !== KOOG_TIMEOUT_MS) {
+    throw new Error(
+      `the koog example config states a test timeout of ${grouped(ms)} ms, but this pin says ` +
+        `${grouped(KOOG_TIMEOUT_MS)}. ` +
+        'That is not a round guess to be adjusted until a run goes green: QA-37 derived it from 45 ' +
+        'samples — 40 warm and 5 cold — against this harness and no other. A lowering does not ' +
+        'fail where it is edited; it fails later, on someone else\'s branch, as a cell that times ' +
+        'out and reads as ambient flakiness. If you have DELIBERATELY RE-MEASURED it, this red is ' +
+        'expected and correct, and the fix is to update BOTH places in the same change: the config ' +
+        'and KOOG_TIMEOUT_MS in this file. Do not delete this assertion to clear the red.'
     );
   }
 });
