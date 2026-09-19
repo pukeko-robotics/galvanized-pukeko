@@ -18,6 +18,13 @@
     "gaunt-sloth-assistant": "^1.0.3"
   },
   "devDependencies": {
-    "@types/express": "^5.0.5"
+    "@types/express": "^5.0.5",
+    "@vitest/eslint-plugin": "^1.6.27",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "eslint": "^10.10.0",
+    "eslint-plugin-oxlint": "^0.16.12",
+    "eslint-plugin-vue": "^10.11.0",
+    "jiti": "^2.7.0"
   }
 }
