@@ -27,23 +27,31 @@
 //      `it-*.js` pattern and each is required to report — a hand-maintained list would be a second
 //      copy of the population, and the fourth harness would be the one nobody checked.
 //
-// THE PINS ARE ON THE FACILITY, WITH ONE DELIBERATE EXCEPTION. Removing the reporter, renaming its
+// THE PINS ARE MOSTLY ON THE FACILITY, AND ON TWO NUMBERS. Removing the reporter, renaming its
 // output file, deleting a `timeout` key, or dropping the call from any harness all fail here — that
 // is the facility, and it is most of what this file does.
 //
-// The exception is the KOOG example's `timeout`, whose exact VALUE is pinned (QA-43). The two
-// configs are guarded differently because they have different defects, and the difference is a
-// decision rather than an inconsistency:
+// The two numbers are the `timeout` in the ROOT config (QA-44) and the `timeout` in the KOOG
+// example's config (QA-43), each pinned by exact VALUE as well as by presence. THE TWO CONFIGS ARE
+// NOW TREATED THE SAME, and the reason they briefly were not is worth keeping, because the
+// difference was a decision at the time rather than an inconsistency:
 //
-//   - The ROOT config's defect was an ABSENT key, so presence is what has to hold there. Its
-//     150 000 ms is measured too, and nothing below asserts which number it is — that is on record
-//     as a choice, not an omission, and it is not a claim that presence is enough everywhere.
-//   - The KOOG config's defect is a SILENT LOWERING: a key edited down does not fail where it was
+//   - The KOOG config's defect was a SILENT LOWERING: a key edited down does not fail where it was
 //     edited, it fails later on someone else's branch as a cell that times out, which reads as
 //     ambient flakiness and gets absorbed by the known-flakes register. Presence cannot see that at
-//     all. Pinning the value does also red on a legitimate, deliberately re-measured number, and
-//     that is the point rather than the cost — it is the one moment the person changing it is
-//     already looking at it and can be told where the old number came from.
+//     all, so QA-43 pinned the value there.
+//   - The ROOT config's defect was an ABSENT key, so presence is what HAD to hold there, and QA-43
+//     deliberately left it at that rather than widen its own diff over a config it had not been
+//     asked to re-measure. QA-44 then asked whether that asymmetry was still right and ruled it was
+//     not: presence cannot detect a lowering here either, and the root config is a backstop for
+//     EVERY headless cell rather than for one example harness, so the larger exposure was the
+//     unguarded one. Both are pinned now, and there is no config here whose measured `timeout` is
+//     guarded by presence alone.
+//
+// Pinning a value does also red on a legitimate, deliberately re-measured number, and that is the
+// point rather than the cost — it is the one moment the person changing it is already looking at
+// it and can be told where the old number came from. Both failure messages say so, and both name
+// what has to change together.
 //
 // WHAT A SOURCE SCAN CANNOT SEE, stated so nobody reads more into a green run than is there. The
 // harness section reads text, because what it is checking is not reachable by importing the
@@ -83,6 +91,18 @@ function assertEqual(actual, expected, what) {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
   if (a !== e) throw new Error(`${what}: expected ${e}, got ${a}`);
+}
+
+/**
+ * A millisecond figure written the way this repository's configs and nodes write one — `50 000`,
+ * not `50000`. Interpolated rather than spelled out in the prose of the messages below, so a
+ * re-measurement that updates a constant cannot leave a message quoting the number it replaced;
+ * grouped so the message still matches what someone searching for the measurement will have read.
+ *
+ * Declared here rather than beside either caller because both value pins in this file use it.
+ */
+function grouped(n) {
+  return n.toLocaleString('en-US').replaceAll(',', ' ');
 }
 
 /**
@@ -234,6 +254,84 @@ check('playwright.config.ts states an explicit test timeout', () => {
   }
 });
 
+// QA-44 — THE SAME KEY, PINNED BY VALUE. The check above catches a DELETED key, which was QA-30's
+// defect. It cannot catch a LOWERED one, and a lowering is the worse failure here: it does not fail
+// where it was made, it fails later, on someone else's branch, as a cell that times out and reads
+// as ambient flakiness. This config backstops EVERY cell in `e2e/`, so a number below a given
+// test's sum of per-step budgets makes that test's budgets unreachable decoration — QA-30's
+// original defect arriving by a different route than the one QA-30 closed.
+//
+// THE RE-DERIVATION, 2026-09-19, done before pinning anything to this number and recorded because a
+// pin quoting a stale sum is a guard that is wrong AND authoritative. `testDir: './e2e'` governs
+// four specs, and the test timeout covers `beforeEach` plus the body, so each spec's constraint is
+// the largest sum of budgeted waits in one of its tests:
+//
+//   - `chat-gth-headless.spec.ts`  120 000 = 30 000 nav + 30 000 tool badge + 45 000 resume text
+//                                            + 15 000 captured frame       (QA-30, unchanged)
+//   - `chat-gth.spec.ts`           135 000 =  5 000 nav (Playwright default) + 5 000 echo
+//                                            + 110 000 ANSWER_STARTS_MS + 10 000 REPLY_TEXT_MS
+//                                            + 5 000 the `Error` assertion  (QA-32, QA-35)
+//   - `chat-gth-stock.spec.ts`      70 000 = 10 000 + 5 000 + 5 000 + 45 000 + 5 000   (QA-33)
+//   - `chat.spec.ts`                55 000 =  5 000 + 5 000 + 30 000 + 10 000 + 5 000
+//
+// SO THE BINDING SPEC HAS MOVED and 150 000's stated provenance is out of date. QA-30 derived it as
+// `chat-gth-headless`'s 120 000 plus 30 000 of slack; the largest sum under this config today is
+// 135 000 in `chat-gth.spec.ts`, since QA-32 and QA-35 collapsed that file onto one 110 000 ms
+// model-bound step. 150 000 still HOLDS — every budget in all four specs is still reachable, which
+// is the property QA-30 was protecting — but the headroom is 15 000 ms, not 30 000. The number was
+// deliberately NOT changed here: moving a measured backstop is QA-30/QA-33 territory and needs its
+// own measurement campaign, not a drive-by edit inside a guard ticket.
+//
+// The regex takes the FIRST top-level `timeout:` in the file, which is this key today. A config
+// that later grows a second one — a `webServer.timeout`, say — placed above it would retarget this
+// pin silently, so keep the test budget first or anchor this more tightly when that day comes.
+const ROOT_TIMEOUT_MS = 150_000;
+
+// The sum this backstop actually has to clear today, per the re-derivation above. Named rather than
+// spelled into the prose twice, so the two messages below cannot come to quote different numbers.
+//
+// BE CLEAR ABOUT WHAT IT DOES NOT DO: this is itself a measured constant that nothing guards. The
+// pin above watches `playwright.config.ts`; nothing watches the SPECS this number was derived from.
+// Raise `ANSWER_STARTS_MS` in `e2e/chat-gth.spec.ts` and the binding sum moves past 150 000, that
+// file's budgets become unreachable decoration — QA-30's defect exactly — and every check here
+// still passes while the message below goes on asserting 135 000. Closing that needs the guard to
+// DERIVE the sums from the specs rather than restate one, which is a different assertion from this
+// one and deliberately not attempted here.
+const ROOT_BINDING_SUM_MS = 135_000;
+
+check('playwright.config.ts states the measured test timeout, at its measured value', () => {
+  const stated = /^\s*timeout:\s*([\d_]+)\s*,/m.exec(config);
+  if (!stated) {
+    throw new Error(
+      'no explicit `timeout` in playwright.config.ts, so there is no value to pin — see the ' +
+        `check above for what its absence costs. It stated ${grouped(ROOT_TIMEOUT_MS)} ms, which ` +
+        'QA-30 derived on 2026-09-12 as the sum of the per-step budgets of the longest test in ' +
+        'e2e/chat-gth-headless.spec.ts (30 000 + 30 000 + 45 000 + 15 000 = 120 000) plus slack. ' +
+        `The largest per-test sum under this config today is ${grouped(ROOT_BINDING_SUM_MS)} ms, ` +
+        'in e2e/chat-gth.spec.ts (QA-32, QA-35). If you are re-measuring this budget, write the ' +
+        'new number into the config AND into ROOT_TIMEOUT_MS in this file, in the same change.'
+    );
+  }
+  const ms = Number(stated[1].replace(/_/g, ''));
+  if (ms !== ROOT_TIMEOUT_MS) {
+    throw new Error(
+      `playwright.config.ts states a test timeout of ${grouped(ms)} ms, but this pin says ` +
+        `${grouped(ROOT_TIMEOUT_MS)}. ` +
+        'That is not a round guess to be adjusted until a run goes green. QA-30 derived it on ' +
+        '2026-09-12 as the sum of the per-step budgets of the longest test in ' +
+        'e2e/chat-gth-headless.spec.ts (30 000 + 30 000 + 45 000 + 15 000 = 120 000) plus slack, ' +
+        'and the largest per-test sum under this config today is ' +
+        `${grouped(ROOT_BINDING_SUM_MS)} ms, in e2e/chat-gth.spec.ts (QA-32, QA-35) — so anything ` +
+        `below ${grouped(ROOT_BINDING_SUM_MS)} makes that file's per-assertion budgets ` +
+        'unreachable decoration, which is the defect QA-30 exists to prevent. A lowering does not ' +
+        "fail where it is edited; it fails later, on someone else's branch, as a cell that times " +
+        'out and reads as ambient flakiness. If you have DELIBERATELY RE-MEASURED it, this red is ' +
+        'expected and correct, and the fix is to update BOTH places in the same change: the ' +
+        'config and ROOT_TIMEOUT_MS in this file. Do not delete this assertion to clear the red.'
+    );
+  }
+});
+
 console.log('first-attempt rate — the harnesses that must report one');
 
 /**
@@ -336,18 +434,19 @@ check(`${KOOG_CONFIG} declares the json reporter at the pinned path`, () => {
   }
 });
 
-// QA-43 — THE MEASURED TEST BUDGET, pinned by VALUE and not merely by presence. See the exception
-// paragraph in this file's header for why this config is guarded differently from the root one.
+// QA-43 — THE MEASURED TEST BUDGET, pinned by VALUE and not merely by presence. The root config's
+// `timeout` is pinned the same way now (QA-44); see the header for why the two configs were once
+// treated differently and no longer are.
 //
 // THE SURVEY THAT PRECEDED THIS ASSERTION, written down because an absent search and an empty one
 // read identically later. Every config tracked in this repository was enumerated from `git ls-files`
 // rather than a bare `grep` — `grep` here honours `.gitignore`, so a zero could have meant filtered
 // rather than absent — and each was read for a constant arrived at by measurement:
 //
-//   - `playwright.config.ts` (root): `timeout: 150_000`, measured (QA-30, the sum of the per-step
-//     budgets of the longest test in `e2e/chat-gth-headless.spec.ts` plus slack). Guarded for
-//     PRESENCE ONLY, deliberately, per the header. The only other measured-and-value-unpinned
-//     constant in the repository.
+//   - `playwright.config.ts` (root): `timeout: 150_000`, measured (QA-30). This was the one other
+//     measured-and-value-unpinned constant the survey found, and QA-43 left it that way on purpose.
+//     QA-44 has since pinned it too — the assertion and its own re-derivation are above, beside the
+//     presence check. No measured `timeout` in this repository is guarded by presence alone now.
 //   - `examples/adk-ui-agent-to-adk-agent/playwright.config.ts`: states NO `timeout` at all. That is
 //     the same defect QA-37 fixed here, and it is left open on purpose: QA-39 ruled it "cannot be
 //     sized here" — sizing it honestly needs Maven, both ADK agents, an AI Studio key, and it runs
@@ -370,16 +469,6 @@ check(`${KOOG_CONFIG} declares the json reporter at the pinned path`, () => {
 // measurement. This number is the one that is far from its justification, which is what earns it a
 // guard.
 const KOOG_TIMEOUT_MS = 50_000;
-
-/**
- * A millisecond figure written the way this repository's configs and nodes write one — `50 000`,
- * not `50000`. Interpolated rather than spelled out in the prose below, so a re-measurement that
- * updates the constant cannot leave a message quoting the number it replaced; grouped so the
- * message still matches what someone searching for the measurement will have read.
- */
-function grouped(n) {
-  return n.toLocaleString('en-US').replaceAll(',', ' ');
-}
 
 check(`${KOOG_CONFIG} states the measured test timeout, at its measured value`, () => {
   const stated = /^\s*timeout:\s*([\d_]+)\s*,/m.exec(koogConfig);
