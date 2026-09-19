@@ -17,7 +17,24 @@ export default defineConfig({
     // `package.json` here — it would also work, and it changes install and workspace semantics
     // for a reason that has nothing to do with where output goes.
     outputDir: './test-results',
-    reporter: 'html',
+    // QA-41 — THIS EXAMPLE KEEPS ITS OWN HTML REPORT FOLDER, and must go on stating one.
+    // `outputFolder` is the only thing that anchors the html report to this config's directory:
+    // `resolveReporterOutputPath` uses the config directory ONLY when this key is set, and
+    // otherwise does the same walk up for a `package.json` that `outputDir` does above. There is
+    // none in this directory, so without this key the report resolves to
+    // `<repoRoot>/playwright-report` — the very folder the root config's own html reporter writes.
+    //
+    // That is worse than sharing a directory: the html reporter DELETES its output folder before
+    // generating, so a run from here does not overwrite part of the root harness's report, it
+    // removes the report and leaves this example's single test in its place. Nothing errors and
+    // nothing warns, and whoever opens the root report next is reading this example's run with no
+    // way to tell that is what they are looking at.
+    //
+    // Keep the basename `playwright-report`. `scripts/check-no-bare-launchers.mjs` skips
+    // directories by BASENAME, so a more distinctive name would send that walker into live
+    // Playwright output, whose text contains the one-shot-runner token it greps for — a red
+    // `pnpm test` with no relation to where output goes.
+    reporter: [['html', { outputFolder: './playwright-report' }]],
     use: {
         baseURL: 'http://localhost:8080',
         trace: 'on-first-retry',

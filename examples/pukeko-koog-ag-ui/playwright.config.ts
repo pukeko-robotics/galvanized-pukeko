@@ -48,7 +48,21 @@ export default defineConfig({
     // and it changes install and workspace semantics for a reason that has nothing to do with
     // where output goes.
     outputDir: './test-results',
-    reporter: [['list'], ['html', { open: 'never' }]],
+    // QA-41 — `outputFolder` IS THE WHOLE POINT OF THIS LINE, and is not interchangeable with the
+    // `outputDir` above. The two keys are resolved by different code: `outputDir` is the artefact
+    // directory, `outputFolder` the html report's, and the reporter honours the config's own
+    // directory ONLY when `outputFolder` is set. Without it `resolveReporterOutputPath` walks up
+    // for a `package.json` — of which there is none here — and the report lands in
+    // `<repoRoot>/playwright-report`, where the root config's html reporter writes.
+    //
+    // The html reporter DELETES its output folder before generating, so an example run there does
+    // not overwrite part of the root harness's report but removes it and leaves this example's
+    // three tests in its place — silently, for anyone who opens the root report afterwards.
+    //
+    // Keep the basename `playwright-report`: `scripts/check-no-bare-launchers.mjs` skips
+    // directories by BASENAME, and a name outside that list sends its walker into live Playwright
+    // output, whose text contains the one-shot-runner token it greps for.
+    reporter: [['list'], ['html', { open: 'never', outputFolder: './playwright-report' }]],
     use: {
         // OPS-8: track the shifted vite port (WEB_PORT); it-koog.js loads `.env`.
         baseURL: `http://localhost:${process.env.WEB_PORT || 5555}`,

@@ -1,15 +1,17 @@
 **/.idea/
 **/target/
 
-# QA-40 — Playwright output from the example suites. Each example config sets its own
-# `outputDir` under its own directory, so its traces and failure artefacts land here instead of
-# in the repo root's. The root .gitignore's `/test-results/` is anchored to the repo root and
-# does not reach a nested path — mirrored here the way
+# Playwright output from the example suites. Each example config states its own `outputDir` (the
+# artefact directory) AND its own html reporter `outputFolder`, both under that example's own
+# directory, so traces, failure artefacts and the html report all land here rather than in the
+# repo root's. The root .gitignore's `/test-results/` and `/playwright-report/` are anchored to
+# the repo root and do not reach a nested path — mirrored here the way
 # packages/galvanized-pukeko-vue-ui/.gitignore already mirrors it for that package.
 #
-# The html report is NOT covered here, because it does not land here: with no explicit
-# `outputFolder`, Playwright resolves `playwright-report` by walking up for a package.json, not
-# from the config's directory, so an example's html report is still written to the repo root's
-# `playwright-report/` and overwrites whatever the root config last put there. That is a
-# separate defect from the one this `outputDir` closes and is not fixed here.
+# Neither pattern below decides where anything goes; they ignore output where it already lands,
+# and it lands here only because those two keys in each config say so. Remove either key and the
+# output returns to the repo root — where the root patterns cover it just as quietly, and an
+# example run again destroys the root harness's report or results.json with nothing to show for
+# it. The configs are what to check if these patterns ever look like they match nothing.
 **/test-results/
+**/playwright-report/
