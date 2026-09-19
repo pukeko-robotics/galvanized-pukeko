@@ -43,12 +43,19 @@ import { test, expect } from '@playwright/test';
 // `.message.notice` has count 0 could not fail here, which is the same family of defect as the
 // one above.
 //
-// WHAT IS *NOT* WRONG WITH IT, so nobody spends the same hour twice. The bare
-// `goto('http://localhost:8080')` with no `?ui=` query is CORRECT for this surface. That jar's
-// bundle predates PLAT-12 and carries no UI-mode selection at all — grepped for `resolveMode`,
-// `bespoke` and `headless`, none present — so `/` really is the surface that renders
-// `.chat-interface`. The koog example needs the query because it drives the vite web client,
-// which does select.
+// QA-42 — WHY THE NAVIGATION NAMES A SURFACE. `?ui=bespoke` is not decoration and must not be
+// "simplified" away: it is the one spelling that is correct on BOTH bundles this example can be
+// served with, which matters because the example pins a published jar and the repository has
+// already moved past it. The pinned 0.0.3 jar's bundle predates PLAT-12 and carries no UI-mode
+// selection at all — grepped for `resolveMode`, `bespoke` and `headless`, none present — so it
+// ignores an unknown query and `/` is the bespoke surface there either way. The bundle now
+// vendored in this repository DOES select: it takes `bespoke` or `stock` off the query and falls
+// through to `headless` for anything else, no query included. `bespoke` IS THE ONLY VALUE THAT
+// LOADS THE SURFACE THESE LOCATORS LIVE ON — `stock` and `headless` both load the copilot chunk,
+// which renders `.pk-headless-chat`, so `stock` is not an interchangeable spelling here. Measured
+// on both bundles, each served directly with a stub behind it: on the jar's bundle the query
+// changes nothing, on the vendored one it is the difference between green and `.chat-interface`
+// not found. The koog example names the surface for the same reason, via the vite web client.
 //
 // WHAT IS STILL WRONG AND IS NOT FIXED HERE. `../playwright.config.ts` states no `timeout`, so
 // every test in this directory runs on Playwright's 30 000 ms default with a real model round
@@ -61,7 +68,7 @@ const GREETING = 'Hello! How can I help you today?';
 
 test.describe('Example Project E2E', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:8080');
+        await page.goto('http://localhost:8080/?ui=bespoke');
         // Wait for initial load
         await expect(page.locator('.chat-interface')).toBeVisible();
     });
