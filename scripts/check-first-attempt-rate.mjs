@@ -19,6 +19,16 @@
 //      because it silently handed every test Playwright's 30 000 ms default while the specs stated
 //      larger budgets they could never reach.
 //
+//   3b. THE BUDGETS THE TIMEOUT HAS TO COVER. QA-46. A `timeout` that is present and at its
+//      measured value is still wrong if the specs have outgrown it: the test dies at the config's
+//      backstop instead of at the per-assertion budget naming its own step, and those budgets
+//      become decoration — QA-30's defect, arriving from the spec side instead of the config side.
+//      So the largest per-test sum of budgeted waits is DERIVED from `e2e/**` and the config's
+//      `timeout` is asserted to cover it. What that replaced was a constant restating the sum,
+//      which nothing watched: raising one budget in one spec falsified it, and the guard went on
+//      quoting it in the very message a reader would trust. `scripts/e2e-budget-scan.mjs` does the
+//      reading and states, and measures with fixtures, what it cannot see.
+//
 //   3. THE HARNESSES. QA-38. A correct reader and a written report still print nothing if no
 //      harness calls them, and for a whole release cycle `it-adk.js` did not: it ran the suite and
 //      reported pass/fail, its rate had to be recomputed by hand afterwards, and nothing here
@@ -48,6 +58,13 @@
 //     unguarded one. Both are pinned now, and there is no config here whose measured `timeout` is
 //     guarded by presence alone.
 //
+// A VALUE PIN AND THE DERIVED INEQUALITY ARE NOT THE SAME ASSERTION, and neither replaces the
+// other. The pin notices a number changing and says where the old one came from; the inequality
+// notices the RELATIONSHIP breaking and says nothing about who moved. Raise the root timeout to
+// 200 000 and only the pin reds — the inequality is happier than before. Raise a spec's budget past
+// the backstop and only the inequality reds — the config never moved. Both failures are real and
+// they do not overlap.
+//
 // Pinning a value does also red on a legitimate, deliberately re-measured number, and that is the
 // point rather than the cost — it is the one moment the person changing it is already looking at
 // it and can be told where the old number came from. Both failure messages say so, and both name
@@ -71,6 +88,14 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  configTestDir,
+  configTestTimeout,
+  configTimeoutKeys,
+  deriveBudgets,
+  largestPerFile,
+  specBudgets,
+} from './e2e-budget-scan.mjs';
 import { DEFAULT_REPORT_PATH, summarise, formatSummary } from './first-attempt-rate.mjs';
 import { stripComments } from './source-scan.mjs';
 
@@ -245,89 +270,284 @@ check('playwright.config.ts declares the json reporter at the pinned path', () =
 });
 
 check('playwright.config.ts states an explicit test timeout', () => {
-  if (!/^\s*timeout:\s*[\d_]+\s*,/m.test(config)) {
+  if (!configTestTimeout(config, 'playwright.config.ts')) {
     throw new Error(
-      'no explicit `timeout` in playwright.config.ts — every test silently falls back to ' +
+      'no explicit top-level `timeout` in playwright.config.ts — every test silently falls back to ' +
         "Playwright's 30 000 ms default while the specs state larger budgets they cannot reach " +
         '(the original QA-30 defect)'
     );
   }
 });
 
-// QA-44 — THE SAME KEY, PINNED BY VALUE. The check above catches a DELETED key, which was QA-30's
-// defect. It cannot catch a LOWERED one, and a lowering is the worse failure here: it does not fail
-// where it was made, it fails later, on someone else's branch, as a cell that times out and reads
-// as ambient flakiness. This config backstops EVERY cell in `e2e/`, so a number below a given
-// test's sum of per-step budgets makes that test's budgets unreachable decoration — QA-30's
-// original defect arriving by a different route than the one QA-30 closed.
-//
-// THE RE-DERIVATION, 2026-09-19, done before pinning anything to this number and recorded because a
-// pin quoting a stale sum is a guard that is wrong AND authoritative. `testDir: './e2e'` governs
-// four specs, and the test timeout covers `beforeEach` plus the body, so each spec's constraint is
-// the largest sum of budgeted waits in one of its tests:
-//
-//   - `chat-gth-headless.spec.ts`  120 000 = 30 000 nav + 30 000 tool badge + 45 000 resume text
-//                                            + 15 000 captured frame       (QA-30, unchanged)
-//   - `chat-gth.spec.ts`           135 000 =  5 000 nav (Playwright default) + 5 000 echo
-//                                            + 110 000 ANSWER_STARTS_MS + 10 000 REPLY_TEXT_MS
-//                                            + 5 000 the `Error` assertion  (QA-32, QA-35)
-//   - `chat-gth-stock.spec.ts`      70 000 = 10 000 + 5 000 + 5 000 + 45 000 + 5 000   (QA-33)
-//   - `chat.spec.ts`                55 000 =  5 000 + 5 000 + 30 000 + 10 000 + 5 000
-//
-// SO THE BINDING SPEC HAS MOVED and 150 000's stated provenance is out of date. QA-30 derived it as
-// `chat-gth-headless`'s 120 000 plus 30 000 of slack; the largest sum under this config today is
-// 135 000 in `chat-gth.spec.ts`, since QA-32 and QA-35 collapsed that file onto one 110 000 ms
-// model-bound step. 150 000 still HOLDS — every budget in all four specs is still reachable, which
-// is the property QA-30 was protecting — but the headroom is 15 000 ms, not 30 000. The number was
-// deliberately NOT changed here: moving a measured backstop is QA-30/QA-33 territory and needs its
-// own measurement campaign, not a drive-by edit inside a guard ticket.
-//
-// The regex takes the FIRST top-level `timeout:` in the file, which is this key today. A config
-// that later grows a second one — a `webServer.timeout`, say — placed above it would retarget this
-// pin silently, so keep the test budget first or anchor this more tightly when that day comes.
-const ROOT_TIMEOUT_MS = 150_000;
+console.log('first-attempt rate — the per-test budgets that timeout has to cover');
 
-// The sum this backstop actually has to clear today, per the re-derivation above. Named rather than
-// spelled into the prose twice, so the two messages below cannot come to quote different numbers.
-//
-// BE CLEAR ABOUT WHAT IT DOES NOT DO: this is itself a measured constant that nothing guards. The
-// pin above watches `playwright.config.ts`; nothing watches the SPECS this number was derived from.
-// Raise `ANSWER_STARTS_MS` in `e2e/chat-gth.spec.ts` and the binding sum moves past 150 000, that
-// file's budgets become unreachable decoration — QA-30's defect exactly — and every check here
-// still passes while the message below goes on asserting 135 000. Closing that needs the guard to
-// DERIVE the sums from the specs rather than restate one, which is a different assertion from this
-// one and deliberately not attempted here.
-const ROOT_BINDING_SUM_MS = 135_000;
+// QA-46 — THE EXTRACTION'S OWN RULES, pinned against sources written here rather than against the
+// specs, which are free to change. The inequality below is only worth its run if the scan can
+// actually see a budget: a scan that quietly returned nothing would make it hold forever, which is
+// the assertion-that-cannot-fail this node was filed to avoid building.
 
-check('playwright.config.ts states the measured test timeout, at its measured value', () => {
-  const stated = /^\s*timeout:\s*([\d_]+)\s*,/m.exec(config);
-  if (!stated) {
+const FIXTURE_COUNTING = `
+import { test, expect } from '@playwright/test';
+
+const SLOW_MS = 40000;
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.app')).toBeVisible({ timeout: 7000 });
+});
+
+/*
+ * PROSE IN THE SHAPE OF CODE, which is why comments are blanked before anything is counted. If
+ * this block reached the scan it would contribute a test and a budget that no run will ever
+ * execute:
+ *   test('a phantom test', async ({ page }) => {
+ *     await expect(page.locator('.gone')).toBeVisible({ timeout: 999999 });
+ *   });
+ */
+test('a test that budgets four ways', async ({ page }) => {
+  // The same shape on one line: await expect(page.locator('.x')).toBeVisible({ timeout: 888888 });
+  await expect(page.locator('.a')).toBeVisible();
+  await expect(page.locator('.b')).toBeVisible({ timeout: 11000 });
+  await expect.poll(() => page.title(), { timeout: SLOW_MS }).not.toBe('');
+  // A PROMPT QUOTING AN ASSERTION, which is why string bodies are blanked too. These specs really
+  // do send prose to a model; a scan that read it would budget for text nothing runs.
+  await page.fill('#q', 'await expect(x).toBeVisible({ timeout: 777777 });');
+  expect((await page.title()).slice(0, 2)).toBe('ok');
+});
+`;
+
+check('the extraction reads a hook, a literal, a named constant and the Playwright default', () => {
+  const tests = specBudgets(FIXTURE_COUNTING, 'fixture');
+  assertEqual(tests.length, 1, 'one test found');
+  assertEqual(tests[0].title, 'a test that budgets four ways', 'the test is named from its title');
+  // 7 000 in the hook, which shares the test's timeout; then 5 000 for the unbudgeted assertion
+  // (Playwright's expect default), 11 000 for the literal and 40 000 through the constant. The
+  // trailing `expect(...)` is NOT awaited, does not retry and buys no time — which is exactly why
+  // e2e/chat-gth-headless.spec.ts sums to 120 000 and not 125 000.
+  assertEqual([tests[0].hookMs, tests[0].bodyMs, tests[0].totalMs], [7000, 56000, 63000], 'sums');
+});
+
+// THE DEMONSTRATED BLIND SPOT, and the reason this file says "narrow" rather than "complete".
+//
+// Only statements lexically inside a test or a hook are summed, so a budget reached through a
+// helper is invisible and the sum comes out LOW — the direction that passes. This fixture is that
+// boundary, measured: the helper budgets 200 000 ms, the test really cannot fit inside any timeout
+// this repository states, and the extraction reports 1 000.
+//
+// It is pinned rather than described because a limitation that is only written down is what QA-46
+// exists to stop. If someone teaches the scan to follow helpers, this check reds and they are
+// standing in the right place to move the boundary deliberately.
+const FIXTURE_HELPER_BUDGET = `
+import { test, expect } from '@playwright/test';
+
+async function waitForReply(page) {
+  await expect(page.locator('.reply')).toBeVisible({ timeout: 200000 });
+}
+
+test('a budget the extraction cannot see', async ({ page }) => {
+  await waitForReply(page);
+  await expect(page.locator('.done')).toBeVisible({ timeout: 1000 });
+});
+`;
+
+check('a budget behind a helper is NOT seen — the measured boundary of this extraction', () => {
+  const tests = specBudgets(FIXTURE_HELPER_BUDGET, 'fixture');
+  assertEqual(tests[0].totalMs, 1000, 'the helper 200 000 is not counted');
+});
+
+check('a budget this extraction cannot evaluate is refused, never counted as zero', () => {
+  const computed = `
+import { test, expect } from '@playwright/test';
+const BASE = 1000;
+test('computed', async ({ page }) => {
+  await expect(page.locator('.a')).toBeVisible({ timeout: BASE * 2 });
+});
+`;
+  let threw = false;
+  try {
+    specBudgets(computed, 'fixture');
+  } catch {
+    threw = true;
+  }
+  if (!threw) throw new Error('an expression budget was silently dropped instead of refusing');
+
+  const undeclared = `
+import { test, expect } from '@playwright/test';
+test('undeclared', async ({ page }) => {
+  await expect(page.locator('.a')).toBeVisible({ timeout: SOMEWHERE_ELSE_MS });
+});
+`;
+  let threwUndeclared = false;
+  try {
+    specBudgets(undeclared, 'fixture');
+  } catch {
+    threwUndeclared = true;
+  }
+  if (!threwUndeclared) throw new Error('a budget naming an unknown constant was counted as zero');
+});
+
+check('a spec the pattern cannot match is refused, not reported as a spec with no budgets', () => {
+  let threw = false;
+  try {
+    specBudgets("import { test } from '@playwright/test';\nconst nothing = 1;\n", 'fixture');
+  } catch {
+    threw = true;
+  }
+  if (!threw) {
     throw new Error(
-      'no explicit `timeout` in playwright.config.ts, so there is no value to pin — see the ' +
-        `check above for what its absence costs. It stated ${grouped(ROOT_TIMEOUT_MS)} ms, which ` +
-        'QA-30 derived on 2026-09-12 as the sum of the per-step budgets of the longest test in ' +
-        'e2e/chat-gth-headless.spec.ts (30 000 + 30 000 + 45 000 + 15 000 = 120 000) plus slack. ' +
-        `The largest per-test sum under this config today is ${grouped(ROOT_BINDING_SUM_MS)} ms, ` +
-        'in e2e/chat-gth.spec.ts (QA-32, QA-35). If you are re-measuring this budget, write the ' +
-        'new number into the config AND into ROOT_TIMEOUT_MS in this file, in the same change.'
+      'a file with no matchable test was accepted. An enumeration that cannot match is ' +
+        'indistinguishable from a clean result, and this one feeds an inequality.'
     );
   }
-  const ms = Number(stated[1].replace(/_/g, ''));
-  if (ms !== ROOT_TIMEOUT_MS) {
+});
+
+// QA-46 — THE `webServer.timeout` BUG, fixed and proven here rather than left as a comment saying
+// to be careful. The pins used to read the first line-anchored `timeout:` in a config, so a nested
+// one written above the test timeout — the shape
+// packages/galvanized-pukeko-vue-ui/playwright.config.ts already has — would have retargeted them
+// onto a dev-server boot tolerance without a word. Brace depth tells them apart.
+//
+// THE OTHER TWO LINES ARE ADVERSARIAL ON PURPOSE and are what make the blanking in
+// scripts/source-scan.mjs a measured requirement rather than a precaution. The template literal is
+// the root config's own `baseURL`: its interpolation is brace-balanced, so a naive count survives
+// it today, and this keeps that true by measurement instead of by luck. The `metadata` note holds a
+// lone closing brace inside a string, which is the case that does NOT balance — unblanked, it ends
+// the enclosing object early and every key after it, the test timeout included, lands at the wrong
+// depth and is simply not found. No config in this repository has one; this is where that stops
+// being load-bearing.
+const FIXTURE_CONFIG = [
+  "import { defineConfig } from '@playwright/test';",
+  'export default defineConfig({',
+  "  testDir: './e2e',",
+  '  use: { baseURL: `http://localhost:${process.env.WEB_PORT || 5555}` },',
+  "  metadata: { note: 'a lone closing brace } inside a string' },",
+  "  webServer: { command: 'pnpm dev', timeout: 30_000 },",
+  '  timeout: 150_000,',
+  '});',
+].join('\n');
+
+check('a nested webServer.timeout written ABOVE the test timeout does not retarget the pin', () => {
+  const keys = configTimeoutKeys(FIXTURE_CONFIG);
+  assertEqual(keys.map((k) => [k.ms, k.depth]), [[30000, 2], [150000, 1]], 'both keys, by depth');
+  assertEqual(configTestTimeout(FIXTURE_CONFIG, 'fixture').ms, 150000, 'the top-level one');
+  assertEqual(configTestDir(FIXTURE_CONFIG, 'fixture'), './e2e', 'testDir');
+});
+
+check('two top-level timeouts are refused rather than resolved by writing order', () => {
+  const twice = FIXTURE_CONFIG.replace("  testDir: './e2e',", "  testDir: './e2e',\n  timeout: 90_000,");
+  let threw = false;
+  try {
+    configTestTimeout(twice, 'fixture');
+  } catch {
+    threw = true;
+  }
+  if (!threw) throw new Error('a config with two top-level timeouts was resolved by position');
+});
+
+// The derivation over the real specs. Assigned here and read by the inequality below AND by the
+// value pin's failure message, which is what stops that message quoting a sum nobody recomputed.
+let derived = null;
+
+check('the budget extraction reads every spec playwright.config.ts governs', () => {
+  derived = deriveBudgets(REPO_ROOT, 'playwright.config.ts', config);
+  for (const spec of largestPerFile(derived.tests)) {
+    if (spec.totalMs <= 0) {
+      throw new Error(
+        `${spec.file} yielded no budgeted wait at all. Either every assertion there really is ` +
+          'unbudgeted, or the shape this scan matches has moved — and the second reads exactly ' +
+          'like the first from here.'
+      );
+    }
+  }
+});
+
+check('playwright.config.ts gives every test time to spend the budgets its own spec states', () => {
+  if (!derived) {
+    throw new Error('the extraction above failed, so this inequality was never evaluated');
+  }
+  const stated = configTestTimeout(config, 'playwright.config.ts');
+  if (!stated) {
+    throw new Error('no top-level `timeout` in playwright.config.ts — see the presence check above');
+  }
+  const worst = derived.largest;
+  if (stated.ms < worst.totalMs) {
     throw new Error(
-      `playwright.config.ts states a test timeout of ${grouped(ms)} ms, but this pin says ` +
+      `playwright.config.ts gives each test ${grouped(stated.ms)} ms, but ${worst.file} states a ` +
+        `test whose own per-assertion budgets sum to ${grouped(worst.totalMs)} ms — ` +
+        `"${worst.title}", short by ${grouped(worst.totalMs - stated.ms)} ms. ` +
+        'That test can no longer reach its last budgets: it dies at this config\'s backstop as an ' +
+        'anonymous test timeout instead of at the budget naming its own step, and every number ' +
+        'after the crossing point is decoration — the defect QA-30 exists to prevent, arriving ' +
+        'from the spec side rather than the config side. ' +
+        'THE FIX IS NOT TO RAISE THE CONFIG SO THIS GOES GREEN. The test timeout follows the ' +
+        'budgets and the budgets follow their measurements, never the other way round: if the ' +
+        'budget is right then the backstop needs re-measuring as its own piece of work, and if it ' +
+        'is not then the budget is what should move. This check does not care which, only that ' +
+        'somebody decided.'
+    );
+  }
+});
+
+if (derived) {
+  // The derivation, PRINTED rather than restated in a comment. A run shows the largest per-test
+  // sum in each spec, so a reader checking the arithmetic reads today's numbers instead of the
+  // ones that were true when someone last wrote them down.
+  for (const spec of largestPerFile(derived.tests).sort((a, b) => b.totalMs - a.totalMs)) {
+    console.log(`       ${String(grouped(spec.totalMs)).padStart(9)} ms  ${spec.file}  "${spec.title}"`);
+  }
+}
+
+/** The binding sum, as the value pins' messages name it — derived at run time, never restated. */
+function bindingSum() {
+  if (!derived) return 'a sum the extraction above could not derive';
+  return `${grouped(derived.largest.totalMs)} ms, in ${derived.largest.file}`;
+}
+
+console.log('first-attempt rate — the measured numbers, pinned by value');
+
+// QA-44 — THE SAME KEY, PINNED BY VALUE. The presence check catches a DELETED key, which was
+// QA-30's defect, and the inequality above catches the SPECS outgrowing it. Neither catches a
+// LOWERED key, and a lowering is the worst of the three: it does not fail where it was made, it
+// fails later, on someone else's branch, as a cell that times out and reads as ambient flakiness.
+//
+// WHERE 150 000 COMES FROM. QA-30 derived it on 2026-09-12 as the sum of the per-step budgets of
+// the longest test in `e2e/chat-gth-headless.spec.ts` (30 000 + 30 000 + 45 000 + 15 000 = 120 000)
+// plus slack. That provenance is history, not a live claim: the binding spec moved when QA-32 and
+// QA-35 collapsed `chat-gth.spec.ts` onto one 110 000 ms model-bound step. WHAT THE BINDING SUM IS
+// TODAY IS NOT WRITTEN DOWN ANYWHERE HERE ON PURPOSE — QA-46 replaced the constant that used to
+// restate it with the derivation above, which recomputes it every run and prints it. A sum restated
+// in a comment is falsified by an edit one directory away, and then goes on being the most
+// authoritative sentence in the file.
+const ROOT_TIMEOUT_MS = 150_000;
+
+check('playwright.config.ts states the measured test timeout, at its measured value', () => {
+  const stated = configTestTimeout(config, 'playwright.config.ts');
+  if (!stated) {
+    throw new Error(
+      'no explicit top-level `timeout` in playwright.config.ts, so there is no value to pin — see ' +
+        `the presence check above for what its absence costs. It stated ${grouped(ROOT_TIMEOUT_MS)} ` +
+        'ms, which QA-30 derived on 2026-09-12 as the sum of the per-step budgets of the longest ' +
+        'test in e2e/chat-gth-headless.spec.ts (30 000 + 30 000 + 45 000 + 15 000 = 120 000) plus ' +
+        `slack. The largest per-test sum under this config today is ${bindingSum()}. If you are ` +
+        're-measuring this budget, write the new number into the config AND into ROOT_TIMEOUT_MS ' +
+        'in this file, in the same change.'
+    );
+  }
+  if (stated.ms !== ROOT_TIMEOUT_MS) {
+    throw new Error(
+      `playwright.config.ts states a test timeout of ${grouped(stated.ms)} ms, but this pin says ` +
         `${grouped(ROOT_TIMEOUT_MS)}. ` +
         'That is not a round guess to be adjusted until a run goes green. QA-30 derived it on ' +
         '2026-09-12 as the sum of the per-step budgets of the longest test in ' +
         'e2e/chat-gth-headless.spec.ts (30 000 + 30 000 + 45 000 + 15 000 = 120 000) plus slack, ' +
-        'and the largest per-test sum under this config today is ' +
-        `${grouped(ROOT_BINDING_SUM_MS)} ms, in e2e/chat-gth.spec.ts (QA-32, QA-35) — so anything ` +
-        `below ${grouped(ROOT_BINDING_SUM_MS)} makes that file's per-assertion budgets ` +
-        'unreachable decoration, which is the defect QA-30 exists to prevent. A lowering does not ' +
-        "fail where it is edited; it fails later, on someone else's branch, as a cell that times " +
-        'out and reads as ambient flakiness. If you have DELIBERATELY RE-MEASURED it, this red is ' +
-        'expected and correct, and the fix is to update BOTH places in the same change: the ' +
-        'config and ROOT_TIMEOUT_MS in this file. Do not delete this assertion to clear the red.'
+        `and the largest per-test sum under this config today is ${bindingSum()} — so anything ` +
+        'below that makes the per-assertion budgets of the test it names unreachable decoration, ' +
+        'which is the defect QA-30 exists to prevent. The inequality check above is what watches ' +
+        'for that; this one watches the number itself, because a lowering does not fail where it ' +
+        "is edited — it fails later, on someone else's branch, as a cell that times out and reads " +
+        'as ambient flakiness. If you have DELIBERATELY RE-MEASURED it, this red is expected and ' +
+        'correct, and the fix is to update BOTH places in the same change: the config and ' +
+        'ROOT_TIMEOUT_MS in this file. Do not delete this assertion to clear the red.'
     );
   }
 });
@@ -468,10 +688,19 @@ check(`${KOOG_CONFIG} declares the json reporter at the pinned path`, () => {
 // directly beneath the sample count that justifies it, so anyone changing one is already reading its
 // measurement. This number is the one that is far from its justification, which is what earns it a
 // guard.
+//
+// QA-46 CONSIDERED RETIRING THIS AND DID NOT, which is worth a sentence because the derived
+// inequality above looks like it subsumes a value pin and does not. 50 000 is a MEASUREMENT — 45
+// samples — where a derived sum is a CONSEQUENCE of numbers measured elsewhere. An inequality
+// notices the koog specs outgrowing 50 000; only a value pin notices 50 000 itself being re-derived
+// to something nobody sampled, and that is the failure QA-37 built it for. The two constants QA-46
+// looked at got opposite answers for the same reason: the one that restated the root config's
+// binding sum was a consequence, and computing it replaced it; this one is a measurement, and
+// nothing can recompute a measurement.
 const KOOG_TIMEOUT_MS = 50_000;
 
 check(`${KOOG_CONFIG} states the measured test timeout, at its measured value`, () => {
-  const stated = /^\s*timeout:\s*([\d_]+)\s*,/m.exec(koogConfig);
+  const stated = configTestTimeout(koogConfig, KOOG_CONFIG);
   if (!stated) {
     throw new Error(
       'no explicit `timeout` in the koog example config — every cell there falls back to ' +
@@ -484,10 +713,9 @@ check(`${KOOG_CONFIG} states the measured test timeout, at its measured value`, 
         'Removing this assertion instead is the ordinary way a pin like this dies.'
     );
   }
-  const ms = Number(stated[1].replace(/_/g, ''));
-  if (ms !== KOOG_TIMEOUT_MS) {
+  if (stated.ms !== KOOG_TIMEOUT_MS) {
     throw new Error(
-      `the koog example config states a test timeout of ${grouped(ms)} ms, but this pin says ` +
+      `the koog example config states a test timeout of ${grouped(stated.ms)} ms, but this pin says ` +
         `${grouped(KOOG_TIMEOUT_MS)}. ` +
         'That is not a round guess to be adjusted until a run goes green: QA-37 derived it from 45 ' +
         'samples — 40 warm and 5 cold — against this harness and no other. A lowering does not ' +
