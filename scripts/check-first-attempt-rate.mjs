@@ -23,8 +23,10 @@
 //      measured value is still wrong if the specs have outgrown it: the test dies at the config's
 //      backstop instead of at the per-assertion budget naming its own step, and those budgets
 //      become decoration — QA-30's defect, arriving from the spec side instead of the config side.
-//      So the largest per-test sum of budgeted waits is DERIVED from `e2e/**` and the config's
-//      `timeout` is asserted to cover it. What that replaced was a constant restating the sum,
+//      So for EACH config below that states a test timeout, the largest per-test sum of budgeted
+//      waits is DERIVED from the specs that config governs and its `timeout` is asserted to cover
+//      it — the root config's over `e2e/**` (QA-46) and the koog example's over its own
+//      `e2e-tests/**` (QA-47). What that replaced was a constant restating the sum,
 //      which nothing watched: raising one budget in one spec falsified it, and the guard went on
 //      quoting it in the very message a reader would trust. `scripts/e2e-budget-scan.mjs` does the
 //      reading and states, and measures with fixtures, what it cannot see.
@@ -444,64 +446,82 @@ check('two top-level timeouts are refused rather than resolved by writing order'
   if (!threw) throw new Error('a config with two top-level timeouts was resolved by position');
 });
 
-// The derivation over the real specs. Assigned here and read by the inequality below AND by the
-// value pin's failure message, which is what stops that message quoting a sum nobody recomputed.
-let derived = null;
+/**
+ * The derivation and the inequality for ONE config: the two checks, the derivation printed, and an
+ * accessor for the binding sum that this config's value pin names in its failure message — which
+ * is what stops that message quoting a sum nobody recomputed.
+ *
+ * BOTH CONFIGS GO THROUGH THIS RATHER THAN THROUGH TWO COPIES OF IT, and that is worth a sentence
+ * because the duplication would be invisible. Most of what follows is a failure MESSAGE, and a
+ * failure message is the one part of a guard that no green run ever reads: a second copy would be
+ * free to drift from the first for as long as both configs stayed green, which is exactly the
+ * period during which nobody looks. The differences between the two configs are their path, their
+ * specs and their number, and all three are arguments.
+ */
+function budgetCoverage(configPath, configSource) {
+  let derived = null;
 
-check('the budget extraction reads every spec playwright.config.ts governs', () => {
-  derived = deriveBudgets(REPO_ROOT, 'playwright.config.ts', config);
-  for (const spec of largestPerFile(derived.tests)) {
-    if (spec.totalMs <= 0) {
+  check(`the budget extraction reads every spec ${configPath} governs`, () => {
+    derived = deriveBudgets(REPO_ROOT, configPath, configSource);
+    for (const spec of largestPerFile(derived.tests)) {
+      if (spec.totalMs <= 0) {
+        throw new Error(
+          `${spec.file} yielded no budgeted wait at all. Either every assertion there really is ` +
+            'unbudgeted, or the shape this scan matches has moved — and the second reads exactly ' +
+            'like the first from here.'
+        );
+      }
+    }
+  });
+
+  check(`${configPath} gives every test time to spend the budgets its own spec states`, () => {
+    if (!derived) {
+      throw new Error('the extraction above failed, so this inequality was never evaluated');
+    }
+    const stated = configTestTimeout(configSource, configPath);
+    if (!stated) {
       throw new Error(
-        `${spec.file} yielded no budgeted wait at all. Either every assertion there really is ` +
-          'unbudgeted, or the shape this scan matches has moved — and the second reads exactly ' +
-          'like the first from here.'
+        `no top-level \`timeout\` in ${configPath}, so this inequality has nothing to compare the ` +
+          'derived sum against. The pin on that key is what says what its absence costs.'
       );
     }
-  }
-});
+    const worst = derived.largest;
+    if (stated.ms < worst.totalMs) {
+      throw new Error(
+        `${configPath} gives each test ${grouped(stated.ms)} ms, but ${worst.file} states a ` +
+          `test whose own per-assertion budgets sum to ${grouped(worst.totalMs)} ms — ` +
+          `"${worst.title}", short by ${grouped(worst.totalMs - stated.ms)} ms. ` +
+          'That test can no longer reach its last budgets: it dies at this config\'s backstop as an ' +
+          'anonymous test timeout instead of at the budget naming its own step, and every number ' +
+          'after the crossing point is decoration — the defect QA-30 exists to prevent, arriving ' +
+          'from the spec side rather than the config side. ' +
+          'THE FIX IS NOT TO RAISE THE CONFIG SO THIS GOES GREEN. The test timeout follows the ' +
+          'budgets and the budgets follow their measurements, never the other way round: if the ' +
+          'budget is right then the backstop needs re-measuring as its own piece of work, and if it ' +
+          'is not then the budget is what should move. This check does not care which, only that ' +
+          'somebody decided.'
+      );
+    }
+  });
 
-check('playwright.config.ts gives every test time to spend the budgets its own spec states', () => {
-  if (!derived) {
-    throw new Error('the extraction above failed, so this inequality was never evaluated');
+  if (derived) {
+    // The derivation, PRINTED rather than restated in a comment. A run shows the largest per-test
+    // sum in each spec, so a reader checking the arithmetic reads today's numbers instead of the
+    // ones that were true when someone last wrote them down.
+    for (const spec of largestPerFile(derived.tests).sort((a, b) => b.totalMs - a.totalMs)) {
+      console.log(`       ${String(grouped(spec.totalMs)).padStart(9)} ms  ${spec.file}  "${spec.title}"`);
+    }
   }
-  const stated = configTestTimeout(config, 'playwright.config.ts');
-  if (!stated) {
-    throw new Error('no top-level `timeout` in playwright.config.ts — see the presence check above');
-  }
-  const worst = derived.largest;
-  if (stated.ms < worst.totalMs) {
-    throw new Error(
-      `playwright.config.ts gives each test ${grouped(stated.ms)} ms, but ${worst.file} states a ` +
-        `test whose own per-assertion budgets sum to ${grouped(worst.totalMs)} ms — ` +
-        `"${worst.title}", short by ${grouped(worst.totalMs - stated.ms)} ms. ` +
-        'That test can no longer reach its last budgets: it dies at this config\'s backstop as an ' +
-        'anonymous test timeout instead of at the budget naming its own step, and every number ' +
-        'after the crossing point is decoration — the defect QA-30 exists to prevent, arriving ' +
-        'from the spec side rather than the config side. ' +
-        'THE FIX IS NOT TO RAISE THE CONFIG SO THIS GOES GREEN. The test timeout follows the ' +
-        'budgets and the budgets follow their measurements, never the other way round: if the ' +
-        'budget is right then the backstop needs re-measuring as its own piece of work, and if it ' +
-        'is not then the budget is what should move. This check does not care which, only that ' +
-        'somebody decided.'
-    );
-  }
-});
 
-if (derived) {
-  // The derivation, PRINTED rather than restated in a comment. A run shows the largest per-test
-  // sum in each spec, so a reader checking the arithmetic reads today's numbers instead of the
-  // ones that were true when someone last wrote them down.
-  for (const spec of largestPerFile(derived.tests).sort((a, b) => b.totalMs - a.totalMs)) {
-    console.log(`       ${String(grouped(spec.totalMs)).padStart(9)} ms  ${spec.file}  "${spec.title}"`);
-  }
+  /** The binding sum, as this config's value pin names it — derived at run time, never restated. */
+  return () => {
+    if (!derived) return 'a sum the extraction above could not derive';
+    return `${grouped(derived.largest.totalMs)} ms, in ${derived.largest.file}`;
+  };
 }
 
-/** The binding sum, as the value pins' messages name it — derived at run time, never restated. */
-function bindingSum() {
-  if (!derived) return 'a sum the extraction above could not derive';
-  return `${grouped(derived.largest.totalMs)} ms, in ${derived.largest.file}`;
-}
+// The derivation over the real specs the ROOT config governs.
+const bindingSum = budgetCoverage('playwright.config.ts', config);
 
 console.log('first-attempt rate — the measured numbers, pinned by value');
 
@@ -654,6 +674,53 @@ check(`${KOOG_CONFIG} declares the json reporter at the pinned path`, () => {
   }
 });
 
+console.log('first-attempt rate — the per-test budgets the koog example timeout has to cover');
+
+// QA-47 — THE SAME INEQUALITY, POINTED AT THIS CONFIG TOO. Until now the koog example had the value
+// pin below and nothing else, so a budget raised inside `e2e-tests/chat.spec.ts` past 50 000 went
+// unnoticed here in precisely the way it no longer could at the root. The two guards answer
+// different questions and neither substitutes for the other: the pin notices this number being
+// re-derived to something nobody sampled, the inequality notices the specs outgrowing it.
+//
+// THE ONE ASSUMPTION THAT DID NOT SURVIVE THE MOVE, because it had never been exercised. A config's
+// `testDir` is resolved against THAT CONFIG'S OWN DIRECTORY, and the extraction used to join it onto
+// the repository root — which is the same thing for the root config and only for the root config.
+// That is not a shape a second caller reveals by failing loudly, either: `./e2e-tests` under the
+// repository root simply does not exist, so it would have surfaced as a missing directory rather
+// than as the wrong one. `scripts/e2e-budget-scan.mjs` now resolves it the way Playwright does.
+//
+// AN EMPTY ENUMERATION IS A FAILURE, not a satisfied inequality. A derived sum against this
+// config's timeout is a real assertion; nought against it is one that cannot fail, and the two are
+// indistinguishable from a green tick. The extraction refuses a `testDir` holding no spec for that
+// reason, and this call relies on that refusal rather than on the directory staying populated.
+const koogBindingSum = budgetCoverage(KOOG_CONFIG, koogConfig);
+
+// THE SURVEY THIS CALL COMPLETES, written down because an absent search and an empty one read
+// identically later. Every Playwright config tracked in this repository was enumerated from
+// `git ls-files` rather than a bare `grep` — `grep` here honours `.gitignore`, so a zero could have
+// meant filtered rather than absent — and cross-checked against a `find` over the working tree,
+// which does not. Both name the same four, and no other config here wants this treatment:
+//
+//   - `playwright.config.ts` (root): covered since QA-46. Its numbers are printed by the run above,
+//     not restated here — that restatement is the thing QA-46 removed.
+//   - `examples/pukeko-koog-ag-ui/playwright.config.ts`: this call, printed the same way.
+//   - `examples/adk-ui-agent-to-adk-agent/playwright.config.ts`: states NO `timeout`, so there is no
+//     number for an inequality to compare against and wiring it in would assert nothing. One thing
+//     is worth recording rather than leaving as an absence: run this same extraction over it and it
+//     derives 35 000 ms against the 30 000 ms Playwright default that config silently falls back to
+//     — so the gap QA-39 adjudicated as "cannot be sized here" is not merely unsized, it is already
+//     crossed, in the same worst-case currency the two checks above use. That does not make it
+//     sizable here: QA-39's reasons stand (Maven, both ADK agents, an AI Studio key, and the A2A
+//     :8082 NPE that OPS-23 and BE-6 record), and a number chosen without samples is what QA-37
+//     exists to prevent. It makes it a MEASURED gap rather than a suspected one, which is a node
+//     rather than a line here. Measured 2026-09-20, and nothing watches it — which is the other
+//     half of why it belongs in a node.
+//   - `packages/galvanized-pukeko-vue-ui/playwright.config.ts`: states no test `timeout` either, and
+//     its one visual spec states no per-assertion budget at all — everything the extraction finds
+//     there is Playwright's own expect default. Nothing was measured, so there is nothing to cover
+//     and nothing to pin. Its `webServer.timeout` is a dev-server boot tolerance, which is the very
+//     shape the depth check exists to keep out rather than something this would ever read.
+
 // QA-43 — THE MEASURED TEST BUDGET, pinned by VALUE and not merely by presence. The root config's
 // `timeout` is pinned the same way now (QA-44); see the header for why the two configs were once
 // treated differently and no longer are.
@@ -704,9 +771,10 @@ check(`${KOOG_CONFIG} states the measured test timeout, at its measured value`, 
   if (!stated) {
     throw new Error(
       'no explicit `timeout` in the koog example config — every cell there falls back to ' +
-        "Playwright's 30 000 ms default, while e2e-tests/chat.spec.ts states per-step budgets " +
-        'summing to 38 000 ms that it can then never be given, and a test dying at 30 000 tells ' +
-        `its reader the wrong number. The key stated ${grouped(KOOG_TIMEOUT_MS)} ms, which QA-37 ` +
+        "Playwright's 30 000 ms default, while the largest per-test sum its own specs state — " +
+        `${koogBindingSum()} — can then never be given to the test that states it, and a test ` +
+        'dying at 30 000 tells its reader the wrong number. ' +
+        `The key stated ${grouped(KOOG_TIMEOUT_MS)} ms, which QA-37 ` +
         'derived from 45 samples — 40 warm and 5 cold — against this harness and no other, so it ' +
         'would stop being copied from the ADK example. If you are re-measuring it, write the new ' +
         'number into the config AND into KOOG_TIMEOUT_MS in this file, in the same change. ' +
@@ -718,7 +786,8 @@ check(`${KOOG_CONFIG} states the measured test timeout, at its measured value`, 
       `the koog example config states a test timeout of ${grouped(stated.ms)} ms, but this pin says ` +
         `${grouped(KOOG_TIMEOUT_MS)}. ` +
         'That is not a round guess to be adjusted until a run goes green: QA-37 derived it from 45 ' +
-        'samples — 40 warm and 5 cold — against this harness and no other. A lowering does not ' +
+        'samples — 40 warm and 5 cold — against this harness and no other, and the largest ' +
+        `per-test sum under this config today is ${koogBindingSum()}. A lowering does not ` +
         'fail where it is edited; it fails later, on someone else\'s branch, as a cell that times ' +
         'out and reads as ambient flakiness. If you have DELIBERATELY RE-MEASURED it, this red is ' +
         'expected and correct, and the fix is to update BOTH places in the same change: the config ' +

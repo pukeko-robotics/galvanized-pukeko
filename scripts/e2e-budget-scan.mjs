@@ -52,7 +52,7 @@
 // independently of it.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 import { blankCommentsAndStrings, stripComments } from './source-scan.mjs';
 
@@ -294,10 +294,26 @@ export function specFilesUnder(dir) {
 /**
  * The whole derivation for one config: its test directory, its specs, every test's budget sum, and
  * the largest of them — which is the number the config's `timeout` has to cover.
+ *
+ * `configPath` is relative to `repoRoot`, and a config's `testDir` is resolved against THAT CONFIG'S
+ * OWN DIRECTORY, which is what Playwright does. This is the whole difference between reading the
+ * root config and reading one that lives in an example, and it does not announce itself: the root
+ * config sits at the repository root, so joining its `testDir` onto the repository root happens to
+ * be right, and every config below the root then resolves to a path that does not exist. A caller
+ * that passed the example's directory instead would get the arithmetic right and the LABELS wrong,
+ * which is worse — two configs here name a `testDir` called `e2e-tests`, so a label relative to the
+ * config would not say which example a file came from. Labels stay relative to `repoRoot` for both.
  */
 export function deriveBudgets(repoRoot, configPath, configSource) {
-  const dir = join(repoRoot, configTestDir(configSource, configPath));
+  const dir = join(repoRoot, dirname(configPath), configTestDir(configSource, configPath));
   const files = specFilesUnder(dir);
+  // ABLATED RATHER THAN BELIEVED (QA-47), because the sentence below is a claim about what would
+  // happen without this refusal, and such a claim is exactly what stops being true quietly. Made a
+  // no-op with the spec moved out of the koog example's `testDir`, the run still failed — but on
+  // `reduce` of an empty array, a message naming neither the directory nor the config. So the
+  // refusal's job today is LEGIBILITY rather than pass-versus-fail, and the vacuous pass it
+  // describes is one seed value away: give that `reduce` below an initial `{ totalMs: 0 }` and an
+  // empty `testDir` satisfies every inequality above it. Keep both.
   if (files.length === 0) {
     throw new Error(
       `no spec file under ${relative(repoRoot, dir)}, which ${configPath} names as its testDir. ` +
