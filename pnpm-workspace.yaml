@@ -2,6 +2,25 @@ packages:
   - 'packages/galvanized-pukeko-vue-ui'
   - 'packages/galvanized-pukeko-web-client'
 
+# THESE ARE PNPM SETTINGS AND THEY REACH ONLY WHAT PNPM INSTALLS — the
+# `packages:` above and this root. A directory that installs with npm instead is
+# not partially covered and not covered with a warning; it is structurally
+# unreachable from here. This repository has such directories: an external-MCP
+# demo whose README deliberately tells its reader to run `npm install`, and the
+# experiments beside it.
+#
+# Those are guarded separately, at rest rather than at install time, and less
+# completely. `scripts/check-npm-release-age.mjs` derives the npm-installed set
+# on every run and fails if one of them is not declared in its table, so the set
+# cannot quietly grow; it then resolves a publish date for every version their
+# lockfiles pin and fails on anything inside the window below, and equally on any
+# age it could not resolve. It reads that window from this file, so the two
+# cannot drift apart. What it CANNOT do is refuse an install: npm offers no
+# equivalent that refuses, and a directory tracking no lockfile pins nothing, so
+# a fresh `npm install` there can still resolve a package published minutes ago.
+# `node scripts/check-npm-release-age.mjs --list` prints the current set and what
+# each directory actually gets.
+#
 # Strict mode: refuse an immature package outright rather than install it and
 # append an exception here. A refusal is this guard working, not a broken build.
 #

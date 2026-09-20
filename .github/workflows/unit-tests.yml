@@ -6,8 +6,13 @@ name: Unit tests
 #
 # `pnpm test` here is three kinds of step chained in this order:
 #   1. the scripts/check-*.mjs guards, starting with the QA-19 one-shot-package-runner
-#      guard and ending with the OPS-141 vendored-bundle staleness gate. They are
-#      cheap file reads, so they run before anything that installs or compiles
+#      guard and ending with the OPS-144 npm package-maturity guard. They are
+#      cheap file reads, so they run before anything that installs or compiles.
+#      That last one runs here as `--offline`: its enumeration of the npm-installed
+#      directories and its check that pnpm-workspace.yaml still declares the maturity
+#      window are file reads like the rest, while the half that asks the registry for
+#      publish dates is a separate job in lockfile-guard.yml. A network-dependent link
+#      in this chain would red every offline local run of `pnpm test`
 #   2. pnpm run lint  — the OPS-52 repository-scoped oxlint pass, which also covers
 #      the root-level harnesses, e2e/ and scripts/ that no workspace-scoped script
 #      reaches

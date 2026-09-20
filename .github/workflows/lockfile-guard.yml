@@ -1,7 +1,29 @@
 name: lockfile-guard
 
-# OPS-4: fail CI if any tracked package-lock.json pins a local Verdaccio
-# registry (localhost:4873 / 127.0.0.1:4873).
+# The two guards on the package-lock.json files this repository tracks. They are
+# here together because they have the same subject and the same trigger, and
+# because a lockfile is the only thing either of them can read: nothing in this
+# workflow installs anything.
+#
+#   verdaccio-leak  (OPS-4)   — a tracked lockfile must not pin a local Verdaccio
+#                               registry, which is non-portable and points
+#                               teammates and CI at a dev-only host.
+#   release-age     (OPS-144) — the 24-hour package-maturity window, enforced in
+#                               the directories pnpm never sees.
+#
+# WHY release-age IS HERE AND NOT IN unit-tests.yml. It needs the registry, and
+# `pnpm test` is a chain of cheap file reads by design; a network-dependent link
+# in it would red every offline local run. The half that needs no network — the
+# enumeration of npm-installed directories, and the check that
+# pnpm-workspace.yaml still declares the window everything else is measured
+# against — does run there, as `check-npm-release-age.mjs --offline`.
+#
+# BRANCH PROTECTION. `release-age` is a new check name and a ruleset names its
+# required checks literally, so until a human adds it there this job goes red
+# visibly without blocking a merge. It was not folded into an existing job to
+# avoid that edit: a maturity failure reported under the name "verdaccio-leak"
+# is a check that tells the reader the wrong thing, which is the same defect
+# OPS-144 exists to fix one level up.
 
 on:
   push:
@@ -35,3 +57,22 @@ jobs:
             exit 1
           fi
           echo "OK: no Verdaccio/localhost registry leaks found."
+
+  # NO `name:` KEY, DELIBERATELY. The status-check context GitHub publishes is the
+  # job's `name:` when it has one and its id otherwise, and the ruleset note above
+  # names `release-age`. A prettier display name here would leave that note — and
+  # anyone acting on it — pointing at a context that never reports.
+  release-age:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+      # No install step: the check is dependency-free node, reads the lockfiles
+      # off disk and asks the registry for publish dates. Measured at roughly ten
+      # seconds over the ~360 versions currently pinned.
+      - name: Sweep npm-installed directories for immature packages
+        run: node scripts/check-npm-release-age.mjs
