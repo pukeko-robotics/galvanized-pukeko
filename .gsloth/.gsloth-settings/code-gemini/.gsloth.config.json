@@ -1,0 +1,32 @@
+{
+  "$schema": "https://gauntsloth.app/schema/v2/gsloth-config.schema.json",
+  "llm": {
+    "type": "google-genai",
+    "model": "gemini-3.8-flash"
+  },
+  "consoleLevel": "ERROR",
+  "prompts": {
+    "guidelines": "GUIDELINES.md"
+  },
+  "builtInTools": {
+    "gth_checklist": true,
+    "gth_grep": true,
+    "run_shell_command": true,
+    "run_build": {
+      "command": "pnpm run build"
+    },
+    "run_lint": {
+      "command": "pnpm run lint"
+    },
+    "run_tests": {
+      "command": "pnpm run test"
+    },
+    "run_single_test": {
+      "command": "pnpm --filter ./packages/${testPath} run test"
+    }
+  },
+  "approvals": {
+    "mode": "auto",
+    "rater": "code-rater"
+  }
+}
