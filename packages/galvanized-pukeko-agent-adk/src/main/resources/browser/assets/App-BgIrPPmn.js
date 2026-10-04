@@ -1,0 +1,1 @@
+import{t as e}from"./CoreApp-CXBO-pvg.js";import{T as t,V as n,g as r,l as i}from"./index-Ceg3cQkO.js";var a=r({__name:`App`,setup(r){return(r,a)=>(t(),i(n(e)))}});export{a as default};

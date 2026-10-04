@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { configService } from './configService'
-import type { HttpAgent } from '@ag-ui/client'
+import { contentToText, type HttpAgent } from '@ag-ui/client'
 import type { AgentSubscriber } from '@ag-ui/client'
 import type { Message, UserMessage, Tool } from '@ag-ui/client'
 // PLAT-55: every surface constructs the same subclass, so the AG-UI protocol
@@ -284,15 +284,18 @@ function buildSubscriber(callbacks: ChatCallbacks): AgentSubscriber {
       console.log('[ChatService] Tool call result:', event.toolCallId)
       const toolCallName = toolCallNames.get(event.toolCallId) ?? ''
       const part = findToolPart(event.toolCallId)
+      // AG-UI 1.0 lets a tool result carry content parts; this surface renders
+      // text only, so non-text parts are dropped here.
+      const resultText = contentToText(event.content)
       if (part && part.kind === 'tool-call') {
-        part.result = event.content ?? ''
+        part.result = resultText
         part.status = 'complete'
         emit()
       }
       // Tool result is in; the model is about to (silently) chew on the new
       // image / text before its next token. Surface that gap.
       setRunState('waiting', 'Waiting for model…')
-      callbacks.onToolCallResult?.(event.toolCallId, toolCallName, event.content ?? '')
+      callbacks.onToolCallResult?.(event.toolCallId, toolCallName, resultText)
     },
     onRunFinishedEvent() {
       currentMsg.done = true

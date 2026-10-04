@@ -9,7 +9,7 @@
  * so CopilotKit speaks the same AG-UI / HTTP-SSE wire the bespoke UI uses AND
  * declares the same protocol level. It still derives from the exact
  * `AbstractAgent` CopilotKit core expects: `@copilotkit/vue/v2` re-exports
- * `@ag-ui/client`, and since CopilotKit 1.70.0 pins the `0.0.59` vue-ui itself
+ * `@ag-ui/client`, and since CopilotKit 1.76.0 pins the `1.0.1` vue-ui itself
  * resolves, both import paths reach one module instance — so there is a single
  * class identity here rather than two. `gauntSlothAgent.spec.ts` asserts that.
  *
