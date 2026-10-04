@@ -155,11 +155,15 @@ describe('RC-68 bespoke surface — the fold marker lands where the cut happened
   })
 
   it('closes an open thinking part above the marker', async () => {
-    const { final } = await streamTurn([
+    // AG-UI 1.0's verifier rejects RUN_FINISHED while a reasoning message is
+    // open, so the stream closes it — but only AFTER the marker, as gaunt-sloth
+    // does, so the fold is still what closes the part.
+    const { updates, final } = await streamTurn([
       { type: 'RUN_STARTED', threadId: 't1', runId: 'r1' },
       { type: 'REASONING_MESSAGE_START', messageId: 'rz', role: 'reasoning' },
       { type: 'REASONING_MESSAGE_CONTENT', messageId: 'rz', delta: 'Weighing options.' },
       CONTEXT_COMPACTED_FRAME,
+      { type: 'REASONING_MESSAGE_END', messageId: 'rz' },
       { type: 'TEXT_MESSAGE_START', messageId: 'm1', role: 'assistant' },
       { type: 'TEXT_MESSAGE_CONTENT', messageId: 'm1', delta: 'Two metres.' },
       { type: 'TEXT_MESSAGE_END', messageId: 'm1' },
@@ -168,6 +172,9 @@ describe('RC-68 bespoke surface — the fold marker lands where the cut happened
 
     expect(kinds(final.parts)).toEqual(['thinking', 'fold', 'text'])
     expect(final.parts[0]).toMatchObject({ kind: 'thinking', done: true })
+    // Closed by the marker itself, not by the END or the text that follow it.
+    const atFold = updates.find((u) => u.parts.some((p) => p.kind === 'fold'))
+    expect(atFold?.parts[0]).toMatchObject({ kind: 'thinking', done: true })
   })
 })
 
