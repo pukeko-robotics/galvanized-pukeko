@@ -70,10 +70,11 @@ export interface ImageCaptureSource {
    *
    * It is NOT, however, unused: two of the three sources this library ships
    * implement it. {@link webcamPanelCaptureSource} answers from the panel it
-   * adapts, and {@link createOnDemandCaptureSource} — the default behind the
-   * CopilotKit frontend tool — from the rejection its last capture attempt was
-   * refused with, so panel-backed hosts and the CopilotKit surfaces alike get
-   * cause-naming messages. {@link createHttpSnapshotCaptureSource} does NOT
+   * adapts, and {@link createOnDemandCaptureSource} from the rejection its last
+   * capture attempt was refused with, so panel-backed hosts get cause-naming
+   * messages. (The CopilotKit frontend tool captures through the camera
+   * controller, cameraController.ts, which names causes with the same
+   * classifier.) {@link createHttpSnapshotCaptureSource} does NOT
    * implement it: it fetches frames over HTTP and has no camera to report on,
    * so every one of its failures keeps the frozen message. See each function
    * for what changes for such a host, and for why the two that do supply it
@@ -284,7 +285,7 @@ type VideoWithFrameCallback = HTMLVideoElement & {
  * {@link PAINTED_FRAME_TIMEOUT_MS} we draw regardless, because a possibly-blank frame
  * still beats failing a capture the user explicitly asked for.
  */
-async function waitForPaintedFrame(video: HTMLVideoElement): Promise<void> {
+export async function waitForPaintedFrame(video: HTMLVideoElement): Promise<void> {
   const withCallback = video as VideoWithFrameCallback
   await new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, PAINTED_FRAME_TIMEOUT_MS)

@@ -134,6 +134,41 @@ export {
   parseImageEnvelope,
 } from './components/toolDisplays'
 export type { ParsedToolResult } from './components/toolDisplays'
+export type { CaptureImageToolDisplayOptions } from './components/toolDisplays'
+
+// RC-35: the camera tool as a configurable capability — the host-settable
+// configuration, its defaults, the controller that runs captures, and the
+// in-Chat element. Re-exported from `./copilot` as well.
+export {
+  createCameraController,
+  defaultCameraController,
+  resolveCameraToolConfig,
+  webcamPanelPermanentPreview,
+  createWebAudioSoundPlayer,
+  createVideoFrameGrabber,
+  playSafely,
+  isSessionActive,
+  DEFAULT_CAMERA_TOOL_CONFIG,
+  INLINE_PREVIEW_SIZES,
+  MAX_COUNTDOWN_SECONDS,
+  CAMERA_UNAVAILABLE_MESSAGE,
+  LOADING_PHOTO_MESSAGE,
+  CAPTURE_CANCELLED_ERROR,
+} from './services/cameraController'
+export type {
+  CameraToolConfig,
+  CameraController,
+  CameraControllerDeps,
+  CameraSession,
+  CameraSessionPhase,
+  CameraSoundPlayer,
+  FrameGrabber,
+  InlinePreviewSize,
+  MediaDevicesLike,
+  MuteStorage,
+  PermanentCameraPreview,
+} from './services/cameraController'
+export { default as PkCameraCapture } from './components/PkCameraCapture.vue'
 
 // A2UI bridge — exported so host apps (e.g. the CopilotKit stock-UI mode in the
 // web-client) can render agent-driven A2UI surfaces using the same processor

@@ -49,7 +49,10 @@ const resultRenderer = computed(() => display.value?.renderResult ?? ToolResultG
 </script>
 
 <template>
-  <div class="tool-call-badge" :class="{ expanded }">
+  <!-- A registered `renderPart` replaces the badge outright (RC-35 D5); every
+       other tool keeps the collapsed-by-default badge below. -->
+  <component v-if="display?.renderPart" :is="display.renderPart" :part="props.part" />
+  <div v-else class="tool-call-badge" :class="{ expanded }">
     <button class="tool-call-header" @click="toggle" :aria-expanded="expanded">
       <span class="tool-call-arrow" :class="{ expanded }">&#9658;</span>
       <span v-if="display?.glyph" class="tool-call-glyph" aria-hidden="true">{{ display.glyph }}</span>

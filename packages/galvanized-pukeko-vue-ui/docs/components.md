@@ -69,9 +69,13 @@ const unregister = registerToolDisplay('capture_image', {
 })
 ```
 
-- **Entry shape** — `ToolDisplayEntry`: `{ renderResult?, summariseParams?, glyph?, label? }`. Every
-  field is optional; an unregistered tool (or an entry with no `renderResult`) uses the generic
+- **Entry shape** — `ToolDisplayEntry`: `{ renderResult?, renderPart?, summariseParams?, glyph?, label? }`.
+  Every field is optional; an unregistered tool (or an entry with no `renderResult`) uses the generic
   fallback and the default `Used <name> tool` header.
+- **`renderPart`** — a component that replaces the whole badge for that tool, receives `{ part }`
+  from the moment the call starts, and is not collapsed. It is for a tool whose result is the thing
+  the user asked for rather than tool internals; the camera tool uses it so a photo shows without a
+  click. Every other tool should keep the collapsed badge.
 - **Renderer props** — a custom `renderResult` component receives `ToolResultRendererProps`
   (`{ part }` — the whole `ToolCallPart`, so it can read `args`, `result`, and `status`).
 - **API** — `registerToolDisplay(name, entry) => unregister`, `registerToolDisplays(record)`,
@@ -150,12 +154,56 @@ Both CopilotKit surfaces — `StockChatApp` (CopilotKit's own chat) and `Headles
 Pass a **stable** array (create it once, outside render) to avoid churning the provider.
 `PukekoCopilot` forwards the prop to whichever CopilotKit surface `uiMode` selects.
 
-Frames come from an `ImageCaptureSource`: `webcamPanelCaptureSource` adapts a mounted
-`PkWebcamPanel`, while the headless default `createOnDemandCaptureSource()` opens
-`getUserMedia`, captures one frame, and releases the camera again. Pass
-`{ description: '…' }` to either factory to tell the model what your camera actually
+Pass `{ description: '…' }` to either factory to tell the model what your camera actually
 shows. No server-side setup is needed with the gaunt-sloth AG-UI backend — the run-input
 declaration alone binds the tool as a client-side interrupt.
+
+### Configuring the camera tool (CopilotKit surfaces)
+
+On the CopilotKit surfaces the camera is a configurable capability. Create one controller
+with your settings and hand it to the tool, the display registration and the shell:
+
+```ts
+import {
+  createCameraController,
+  createCaptureImageFrontendTool,
+  registerCaptureImageToolDisplay,
+} from '@galvanized-pukeko/vue-ui/copilot'
+
+const camera = createCameraController({ countdownSeconds: 3, inlinePreviewSize: 'full' })
+registerCaptureImageToolDisplay({ camera })                   // the element in the Chat
+const frontendTools = [createCaptureImageFrontendTool({ camera })]
+// <PukekoCopilot ui-mode="headless" :frontend-tools="frontendTools" :camera="camera" />
+```
+
+The configuration belongs to the host. The model still calls `capture_image` with no
+arguments and gets the same envelope back.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `permanentPreview` | `null` | A view of your own that is always on, `{ source, blink? }`. Captures read from `source`, `blink()` runs at the shutter, and no live view is shown in the Chat. `webcamPanelPermanentPreview(() => panelRef.value)` wires a mounted `PkWebcamPanel`. |
+| `countdownSeconds` | `3` | A `3 — 2 — 1 — 📷` countdown before the shutter. `0` turns it off. Values are clamped to 0–10. |
+| `renderToA2UI` | `false` | Also show the latest capture in the headless A2UI pane (`a2uiTarget: 'panel'`). Has no effect where there is no pane: `?ui=stock`, or `a2uiTarget: 'chat'`. |
+| `sounds` | `true` | A beep on each countdown number and a shutter click. The user can mute them from the countdown, and the browser remembers that choice. If the browser refuses to play a sound, the photo is still taken. |
+| `inlinePreviewSize` | `'full'` | How big the photo and the live view are drawn in the Chat: `'full'`, `'small'` or `'collapsed'`. `'collapsed'` puts the photo behind a "Show photo" disclosure. |
+| `toolCallLabel` | `'Taking photo…'` | The label shown in the Chat while a capture runs. |
+
+What the user sees with no permanent preview: the label appears in the Chat. Then the browser asks
+for camera permission if it has not been granted, and the agent's turn waits for the answer. A live
+view opens below the label and the countdown runs. The view blinks at the shutter, and the photo
+replaces the view, shown in full. If the frame is still arriving, "Loading your photo" shows in the
+meantime. If the camera cannot be reached, the Chat shows a short explanation and asks the user to
+check the camera, instead of showing an error. Screen readers hear each countdown number through a
+polite live region.
+
+Both `?ui=headless` and `?ui=stock` render captures. Stock does it through the tool's own `render`,
+so no extra wiring is needed there.
+
+Frames come from an `ImageCaptureSource` when you do not use a controller:
+`webcamPanelCaptureSource` adapts a mounted `PkWebcamPanel`, `createOnDemandCaptureSource()` opens
+`getUserMedia`, captures one frame and releases the camera again, and
+`createCaptureImageFrontendTool({ source })` captures straight from a source of yours, with no
+countdown, sounds or live view.
 
 ## Camera status
 
@@ -213,8 +261,7 @@ over HTTP and has no camera to report on — so every one of its failures keeps 
 message unchanged.
 
 `webcamPanelCaptureSource` reports the current status of the panel it adapts.
-`createOnDemandCaptureSource()` — the default behind `createCaptureImageFrontendTool()`,
-so both CopilotKit surfaces — reports why its **last capture attempt** was refused, which
+`createOnDemandCaptureSource()` reports why its **last capture attempt** was refused, which
 is not the same thing: it opens and releases the camera around each capture, so it
 reports nothing before the first attempt or after a successful one. Only the
 `getUserMedia` rejection itself is classified: a failure *after* the camera has opened

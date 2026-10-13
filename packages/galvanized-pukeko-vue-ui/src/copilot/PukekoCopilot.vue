@@ -21,6 +21,7 @@ import HeadlessChatApp from './HeadlessChatApp.vue'
 import CoreApp from '../CoreApp.vue'
 import type { VueFrontendTool } from '@copilotkit/vue/v2'
 import type { UiMode, A2UITarget } from './types'
+import type { CameraController } from '../services/cameraController'
 
 withDefaults(
   defineProps<{
@@ -40,8 +41,14 @@ withDefaults(
      * (`uiMode === 'stock' | 'headless'`).
      */
     frontendTools?: VueFrontendTool[]
+    /**
+     * The camera tool's controller (RC-35). Only the headless surface reads it
+     * here, to mirror a capture into its A2UI pane when `renderToA2UI` is on;
+     * stock has no A2UI pane, so there the setting is a no-op.
+     */
+    camera?: CameraController | null
   }>(),
-  { uiMode: 'bespoke', agUiUrl: '', a2uiTarget: 'panel', frontendTools: () => [] },
+  { uiMode: 'bespoke', agUiUrl: '', a2uiTarget: 'panel', frontendTools: () => [], camera: null },
 )
 </script>
 
@@ -52,6 +59,7 @@ withDefaults(
     :ag-ui-url="agUiUrl"
     :a2ui-target="a2uiTarget"
     :frontend-tools="frontendTools"
+    :camera="camera"
   />
   <CoreApp v-else />
 </template>

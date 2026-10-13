@@ -130,6 +130,8 @@ describe('theme: MIGRATED discovery (glob-based, not a hardcoded allowlist)', ()
         'HeadlessChat.vue',
         // RC-68: the shared context-fold marker, tokenised from the start.
         'PkContextFoldNotice.vue',
+        // RC-35: the camera tool's in-Chat element, tokenised from the start.
+        'PkCameraCapture.vue',
         'ToolCallBadge.vue',
         'ToolResultGeneric.vue',
       ].sort(),

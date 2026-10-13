@@ -53,7 +53,11 @@ export { default as PkContextFoldNotice } from './components/PkContextFoldNotice
 // re-exported here too so copilot-only consumers have a single import path
 // (like the registry/theming re-exports above, the two bundles share behaviour
 // through the frozen envelope contract, not module identity).
-export { createCaptureImageFrontendTool } from './copilot/captureImageFrontendTool'
+export {
+  createCaptureImageFrontendTool,
+  createStockCameraCaptureRender,
+  NO_ARGUMENTS_SCHEMA,
+} from './copilot/captureImageFrontendTool'
 export type { CaptureImageFrontendToolOptions } from './copilot/captureImageFrontendTool'
 export {
   CAPTURE_IMAGE_TOOL_NAME,
@@ -105,7 +109,35 @@ export {
   CaptureImageResult,
   parseImageEnvelope,
 } from './components/toolDisplays'
-export type { ParsedToolResult } from './components/toolDisplays'
+export type { ParsedToolResult, CaptureImageToolDisplayOptions } from './components/toolDisplays'
+
+// RC-35: the camera tool's configuration and controller, re-exported here as
+// well as from the library root so a copilot-only host has one import path.
+// Create one controller and hand it to `createCaptureImageFrontendTool`,
+// `registerCaptureImageToolDisplay` and the shell's `camera` prop.
+export {
+  createCameraController,
+  defaultCameraController,
+  resolveCameraToolConfig,
+  webcamPanelPermanentPreview,
+  DEFAULT_CAMERA_TOOL_CONFIG,
+  INLINE_PREVIEW_SIZES,
+  MAX_COUNTDOWN_SECONDS,
+  CAMERA_UNAVAILABLE_MESSAGE,
+  LOADING_PHOTO_MESSAGE,
+  CAPTURE_CANCELLED_ERROR,
+} from './services/cameraController'
+export type {
+  CameraToolConfig,
+  CameraController,
+  CameraControllerDeps,
+  CameraSession,
+  CameraSessionPhase,
+  CameraSoundPlayer,
+  InlinePreviewSize,
+  PermanentCameraPreview,
+} from './services/cameraController'
+export { default as PkCameraCapture } from './components/PkCameraCapture.vue'
 
 // Theming (PLAT-23). Re-exported here as well as from the library root so a
 // consumer importing the headless surface from this sub-path can re-skin it via

@@ -245,12 +245,30 @@ function captureFrame(): string | null {
   return canvas.toDataURL('image/jpeg', 0.8)
 }
 
+/**
+ * RC-35: blink the view once, as a shutter acknowledgement. This is what a
+ * host wiring this panel as the camera tool's permanent preview gets at the
+ * moment of capture (`webcamPanelPermanentPreview`). Purely visual.
+ */
+const blinking = ref(false)
+let blinkTimer: ReturnType<typeof setTimeout> | null = null
+const BLINK_MS = 200
+function blink() {
+  blinking.value = true
+  if (blinkTimer) clearTimeout(blinkTimer)
+  blinkTimer = setTimeout(() => {
+    blinking.value = false
+    blinkTimer = null
+  }, BLINK_MS)
+}
+
 onMounted(() => {
   startCamera()
 })
 
 onUnmounted(() => {
   stopCamera()
+  if (blinkTimer) clearTimeout(blinkTimer)
 })
 
 // RC-55 additions (`cameraStatus`, `cameraError`) are strictly APPENDED: this is
@@ -264,6 +282,8 @@ defineExpose({
   isActive,
   cameraStatus,
   cameraError,
+  // RC-35, appended for the same reason as the RC-55 members above.
+  blink,
 })
 </script>
 
@@ -282,7 +302,7 @@ defineExpose({
       <p>{{ error }}</p>
       <button @click="startCamera">Retry</button>
     </div>
-    <div v-else class="webcam-view">
+    <div v-else class="webcam-view" :class="{ blinking }" data-testid="pk-webcam-view">
       <video ref="videoRef" autoplay playsinline muted />
       <div v-if="!isActive" class="webcam-loading">Connecting to camera...</div>
     </div>
@@ -306,6 +326,22 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* RC-35: the shutter blink. */
+.webcam-view::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+}
+
+.webcam-view.blinking::after {
+  opacity: 0.85;
+  transition: none;
 }
 
 .webcam-view video {

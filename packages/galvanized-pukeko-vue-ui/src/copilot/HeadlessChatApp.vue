@@ -16,6 +16,7 @@ import { configService } from '../services/configService'
 import HeadlessChat from './HeadlessChat.vue'
 import PkAppChrome from '../components/PkAppChrome.vue'
 import type { A2UITarget } from './types'
+import type { CameraController } from '../services/cameraController'
 
 const props = withDefaults(
   defineProps<{
@@ -28,8 +29,10 @@ const props = withDefaults(
      * array once, not per render.
      */
     frontendTools?: VueFrontendTool[]
+    /** RC-35: the camera controller, for the A2UI-pane copy of a capture. */
+    camera?: CameraController | null
   }>(),
-  { agUiUrl: '', a2uiTarget: 'panel', frontendTools: () => [] },
+  { agUiUrl: '', a2uiTarget: 'panel', frontendTools: () => [], camera: null },
 )
 
 const url = props.agUiUrl || configService.get().agUiUrl
@@ -46,7 +49,7 @@ const selfManagedAgents = { default: agent.value }
          PkAppChrome. The headless split-screen + A2UI panel live inside
          HeadlessChat (PLAT-19), rendered here as the chrome's main content. -->
     <PkAppChrome>
-      <HeadlessChat agent-id="default" :a2ui-target="props.a2uiTarget" />
+      <HeadlessChat agent-id="default" :a2ui-target="props.a2uiTarget" :camera="props.camera" />
     </PkAppChrome>
   </CopilotKitProvider>
 </template>

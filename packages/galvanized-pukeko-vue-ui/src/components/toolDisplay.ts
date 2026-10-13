@@ -49,6 +49,17 @@ export interface ToolDisplayEntry {
    */
   renderResult?: Component
   /**
+   * A Vue component that takes over the WHOLE part — header and body — in
+   * place of the collapsible badge. It receives {@link ToolResultRendererProps}
+   * (`{ part }`) from the moment the call starts (`status: 'pending'`), not only
+   * once a result lands, and nothing about it is collapsed by the badge.
+   *
+   * For a tool whose result is the artifact the user asked for rather than tool
+   * internals — RC-35's camera photo (D5) is the case it exists for. Every other
+   * tool keeps the collapsed badge (DL-2); omit this to get it.
+   */
+  renderPart?: Component
+  /**
    * Produces a short one-line summary of the call args, shown inline in the
    * collapsed header (e.g. `capture_image → front camera`). Omit for none.
    */

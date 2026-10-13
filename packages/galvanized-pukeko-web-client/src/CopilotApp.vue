@@ -9,17 +9,25 @@
  */
 import {
   PukekoCopilot,
+  createCameraController,
   createCaptureImageFrontendTool,
   registerCaptureImageToolDisplay,
   type UiMode,
   type A2UITarget,
 } from '@galvanized-pukeko/vue-ui/copilot'
 
-// RC-19: render a captured frame inline in the conversation. Without this the
-// badge falls through to the generic renderer and a capture shows as a raw
+// RC-35: one camera controller shared by the tool's handler, the in-Chat
+// element and the A2UI pane. Library defaults otherwise — a 3-second
+// photobooth countdown with sounds (user-mutable), the photo inline at full
+// size and uncollapsed, the live view in the Chat — plus the preview mirrored
+// into the headless Workplane, since this app's default surface has one.
+const camera = createCameraController({ renderToA2UI: true })
+
+// RC-19/RC-35: render a capture inline in the conversation — live view,
+// countdown, then the photo — instead of the generic renderer's raw
 // `{mimeType, data: <base64>}` blob. At module scope, not in setup: the PLAT-17
 // registry is not reactive, so it must be populated before any badge mounts.
-registerCaptureImageToolDisplay()
+registerCaptureImageToolDisplay({ camera })
 
 // PLAT-19: the headless A2UI render target. Defaults to the split `panel`
 // (bespoke parity). `uiMode` defaults to `headless` — the app default surface
@@ -29,16 +37,22 @@ withDefaults(defineProps<{ uiMode?: UiMode; a2uiTarget?: A2UITarget }>(), {
   a2uiTarget: 'panel',
 })
 
-// PLAT-18: register the shared `capture_image` client tool once for the
-// headless surface (its default on-demand getUserMedia source — no persistent
-// webcam panel here). Created at setup scope so the array identity is stable
-// (CopilotKitProvider's `frontendTools` contract).
-const frontendTools = [createCaptureImageFrontendTool()]
+// PLAT-18/RC-35: register the shared `capture_image` client tool once. Its
+// handler captures from a stream opened for the capture (no permanent webcam
+// panel here), and its `render` is what shows a capture on `?ui=stock`.
+// Created at setup scope so the array identity is stable (CopilotKitProvider's
+// `frontendTools` contract). `?ui=bespoke` gets no camera, deliberately (D6).
+const frontendTools = [createCaptureImageFrontendTool({ camera })]
 </script>
 
 <template>
   <div class="copilot-app">
-    <PukekoCopilot :ui-mode="uiMode" :a2ui-target="a2uiTarget" :frontend-tools="frontendTools" />
+    <PukekoCopilot
+      :ui-mode="uiMode"
+      :a2ui-target="a2uiTarget"
+      :frontend-tools="frontendTools"
+      :camera="camera"
+    />
   </div>
 </template>
 

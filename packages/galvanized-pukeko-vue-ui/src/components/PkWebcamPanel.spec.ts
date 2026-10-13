@@ -83,6 +83,8 @@ const EXPECTED_EXPOSED_KEYS = [
   'isActive',
   'cameraStatus',
   'cameraError',
+  // RC-35: the shutter blink, appended after RC-55's members.
+  'blink',
 ] as const
 
 /** The raw object handed to `defineExpose`, straight off the component instance. */

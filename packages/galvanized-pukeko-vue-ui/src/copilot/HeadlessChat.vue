@@ -48,10 +48,22 @@ import type { MessagePart } from '../services/chatService'
 import { readCustomEvent, type SeenCustomNames } from '../services/contextCompaction'
 import { toBubbles, type AgentMessageLike, type ContextFoldMarker } from './useHeadlessChat'
 import type { A2UITarget } from './types'
+import PkCameraCapture from '../components/PkCameraCapture.vue'
+import type { CameraController } from '../services/cameraController'
 
 const props = withDefaults(
-  defineProps<{ agentId?: string; a2uiTarget?: A2UITarget }>(),
-  { agentId: 'default', a2uiTarget: 'panel' },
+  defineProps<{
+    agentId?: string
+    a2uiTarget?: A2UITarget
+    /**
+     * The camera tool's controller (RC-35), for the A2UI pane: with
+     * `camera.config.renderToA2UI` on and the `panel` target, the latest
+     * capture's live view and photo also show in the pane. The in-Chat element
+     * comes from the tool-display registry and does not need this prop.
+     */
+    camera?: CameraController | null
+  }>(),
+  { agentId: 'default', a2uiTarget: 'panel', camera: null },
 )
 
 const { copilotkit } = useCopilotKit()
@@ -234,6 +246,17 @@ watch(
   { immediate: true, deep: true },
 )
 
+/**
+ * RC-35: the latest capture, mirrored into the A2UI pane when the host turned
+ * `renderToA2UI` on. Only the `panel` target has a pane; with `chat` (A2UI
+ * inline) the setting is a documented no-op.
+ */
+const panelCameraSession = computed(() =>
+  props.a2uiTarget === 'panel' && props.camera?.config.renderToA2UI
+    ? (props.camera.latestSession.value ?? null)
+    : null,
+)
+
 function scrollToBottom() {
   nextTick(() => {
     const el = messagesEl.value
@@ -242,6 +265,15 @@ function scrollToBottom() {
 }
 
 watch(bubbles, scrollToBottom, { deep: true })
+// RC-35: the in-Chat live view grows the thread without touching `bubbles`
+// (the part is unchanged while the capture runs), so follow its phase too.
+watch(
+  () => {
+    const s = props.camera?.latestSession.value
+    return s ? `${s.id}:${s.phase}:${s.streaming}` : ''
+  },
+  scrollToBottom,
+)
 
 async function send() {
   const text = draft.value.trim()
@@ -308,6 +340,9 @@ function newConversation() {
   // PLAT-21: reset the shared panel surface + its feed-dedupe (not bubble-derived).
   panelA2ui.clearSurfaces()
   fedToolCallIds.clear()
+  // RC-35: capture sessions belong to the conversation too (the pane mirrors
+  // the latest one).
+  props.camera?.clear()
 }
 </script>
 
@@ -410,6 +445,15 @@ function newConversation() {
 
     <!-- panel target: single shared, persistent/updatable surfaces beside chat. -->
     <div v-if="a2uiTarget === 'panel'" class="a2ui-panel" data-testid="pk-headless-a2ui-panel">
+      <!-- RC-35 render-to-A2UI: the latest capture in the Workplane as well as
+           in the Chat. In the pane, so it can never occlude the chat input. -->
+      <div v-if="panelCameraSession" class="camera-pane" data-testid="pk-headless-camera-pane">
+        <PkCameraCapture
+          :tool-call-id="panelCameraSession.id"
+          :camera="camera"
+          placement="panel"
+        />
+      </div>
       <A2UISurface
         v-for="[id, surface] in panelA2ui.surfaces.value"
         :key="id"
@@ -420,7 +464,7 @@ function newConversation() {
       <!-- Empty-workplane placeholder (bespoke CoreApp parity): the big Pukeko
            logo shown until the first A2UI surface arrives. -->
       <div
-        v-if="panelA2ui.surfaces.value.size === 0"
+        v-if="panelA2ui.surfaces.value.size === 0 && !panelCameraSession"
         class="waiting-placeholder"
         data-testid="pk-headless-waiting-placeholder"
       >
@@ -466,6 +510,9 @@ function newConversation() {
   padding: 1rem;
   background: var(--pk-color-surface-sunken, #f9fafb);
   border-left: 1px solid var(--pk-color-border, #e5e7eb);
+}
+.camera-pane {
+  margin-bottom: 1rem;
 }
 .waiting-placeholder {
   display: flex;
