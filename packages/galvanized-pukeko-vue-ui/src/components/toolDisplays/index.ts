@@ -40,6 +40,8 @@ export function createCameraCapturePartRenderer(camera: CameraController | null)
         h(PkCameraCapture, {
           toolCallId: props.part.toolCallId,
           result: props.part.result ?? null,
+          // A finished call with no result must not read "Taking photo…".
+          status: props.part.status,
           camera,
         })
     },

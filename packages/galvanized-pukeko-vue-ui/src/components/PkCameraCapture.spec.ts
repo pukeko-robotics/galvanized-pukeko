@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { readFileSync } from 'node:fs'
 import PkCameraCapture from './PkCameraCapture.vue'
 import ToolCallBadge from './ToolCallBadge.vue'
 import { registerCaptureImageToolDisplay } from './toolDisplays'
@@ -203,6 +204,15 @@ describe('PkCameraCapture — while the capture runs', () => {
     await pending
   })
 
+  it('the countdown and the whole element use info tokens, never the danger family (D4, DL-8)', () => {
+    const source = readFileSync(`${import.meta.dirname}/PkCameraCapture.vue`, 'utf8')
+    expect(source).not.toMatch(/--pk-color-danger/)
+    const countdownRule = source.match(/\.pk-camera-countdown li \{([^}]*)\}/)?.[1] ?? ''
+    expect(countdownRule).toContain('var(--pk-color-info-surface')
+    expect(countdownRule).toContain('var(--pk-color-info-border')
+    expect(countdownRule).toContain('var(--pk-color-info-text')
+  })
+
   it('sits in the message flow: nothing in it is fixed to the viewport (D1)', async () => {
     const { camera, release } = controller({ countdownSeconds: 1 })
     const pending = camera.capture('tc-1')
@@ -228,6 +238,29 @@ describe('registry rendering — D5 non-collapse without regressing other tools'
     registerCaptureImageToolDisplay({ camera })
     const wrapper = mount(ToolCallBadge, { props: { part: part() } })
     expect(wrapper.get('[data-testid="pk-camera-label"]').text()).toBe('Taking photo…')
+  })
+
+  it('a call that completed with no result and no live session is over, not "Taking photo…"', () => {
+    const { camera } = controller()
+    registerCaptureImageToolDisplay({ camera })
+    const wrapper = mount(ToolCallBadge, { props: { part: part(undefined, 'complete') } })
+    expect(wrapper.get('[data-testid="pk-camera-label"]').text()).toBe('Photo not taken')
+    expect(wrapper.find('[data-testid="pk-camera-ended"]').exists()).toBe(true)
+    expect(wrapper.find('.pk-camera-dot').exists()).toBe(false)
+  })
+
+  it('a complete status does not override a session that is still running', async () => {
+    const { camera, release } = controller({ countdownSeconds: 1 })
+    const pending = camera.capture('tc-1')
+    await vi.advanceTimersByTimeAsync(0)
+    const wrapper = mount(PkCameraCapture, {
+      props: { toolCallId: 'tc-1', camera, status: 'complete' },
+    })
+    expect(wrapper.get('[data-testid="pk-camera-label"]').text()).toBe('Taking photo…')
+    expect(wrapper.find('.pk-camera-dot').exists()).toBe(true)
+    await vi.advanceTimersByTimeAsync(1_000)
+    release()
+    await pending
   })
 
   it('accepts the original string signature for a renamed tool', () => {

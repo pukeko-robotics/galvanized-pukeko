@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
 import {
   CAPTURE_CANCELLED_ERROR,
   DEFAULT_CAMERA_TOOL_CONFIG,
   MAX_COUNTDOWN_SECONDS,
   createCameraController,
+  createVideoFrameGrabber,
   isSessionActive,
   playSafely,
   resolveCameraToolConfig,
@@ -13,7 +15,7 @@ import {
   type MediaDevicesLike,
   type MuteStorage,
 } from './cameraController'
-import { CAPTURE_IMAGE_FAILED_ERROR } from './captureImage'
+import { CAPTURE_IMAGE_FAILED_ERROR, DEFAULT_SETTLE_MS } from './captureImage'
 
 /**
  * RC-35: the camera tool's configuration surface, its enable/streaming state
@@ -281,6 +283,60 @@ describe('enable / streaming state (D3: allowed and streaming are separate)', ()
     expect(h.captureFrame).not.toHaveBeenCalled()
   })
 
+  it('Stop while the permission prompt is open cancels at once, and a late grant is released', async () => {
+    const h = harness()
+    let grant!: (s: MediaStream) => void
+    h.getUserMedia.mockReturnValue(new Promise<MediaStream>((r) => (grant = r)))
+    const camera = createCameraController({ countdownSeconds: 3 }, h.deps)
+    const abort = new AbortController()
+    const pending = camera.capture('tc-1', abort.signal)
+    await vi.advanceTimersByTimeAsync(100)
+    expect(camera.session('tc-1')!.phase).toBe('requesting')
+    abort.abort()
+    await vi.advanceTimersByTimeAsync(0)
+    await expect(pending).resolves.toBe(JSON.stringify({ error: CAPTURE_CANCELLED_ERROR }))
+    const s = camera.session('tc-1')!
+    expect(s.phase).toBe('cancelled')
+    expect(isSessionActive(s)).toBe(false)
+    // The user answers the prompt afterwards: the camera is released, not used.
+    const late = fakeStream()
+    grant(late.stream)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(late.track.stop).toHaveBeenCalled()
+    expect(s.streaming).toBe(false)
+    expect(h.beep).not.toHaveBeenCalled()
+    expect(h.captureFrame).not.toHaveBeenCalled()
+  })
+
+  it('a run already stopped never raises the permission prompt', async () => {
+    const h = harness()
+    const camera = createCameraController({ countdownSeconds: 0 }, h.deps)
+    const abort = new AbortController()
+    abort.abort()
+    await expect(camera.capture('tc-1', abort.signal)).resolves.toBe(
+      JSON.stringify({ error: CAPTURE_CANCELLED_ERROR }),
+    )
+    expect(h.getUserMedia).not.toHaveBeenCalled()
+  })
+
+  it('Stop while the photo is loading cancels at once and releases the camera', async () => {
+    const h = harness()
+    h.captureFrame.mockReturnValue(new Promise<string | null>(() => {}))
+    const camera = createCameraController({ countdownSeconds: 0 }, h.deps)
+    const abort = new AbortController()
+    const pending = camera.capture('tc-1', abort.signal)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(camera.session('tc-1')!.phase).toBe('loading')
+    abort.abort()
+    await vi.advanceTimersByTimeAsync(0)
+    await expect(pending).resolves.toBe(JSON.stringify({ error: CAPTURE_CANCELLED_ERROR }))
+    const s = camera.session('tc-1')!
+    expect(s.phase).toBe('cancelled')
+    expect(s.streaming).toBe(false)
+    expect(h.track.stop).toHaveBeenCalled()
+    expect(h.closeGrabber).toHaveBeenCalled()
+  })
+
   it('keys sessions by tool-call id, tracks the latest, and forgets them on clear', async () => {
     const h = harness()
     const camera = createCameraController({ countdownSeconds: 0 }, h.deps)
@@ -428,6 +484,61 @@ describe('sounds never fail a capture (D4 consequence 2)', () => {
   })
 })
 
+describe('the streaming element draws through the shared drawVideoFrame (review finding 4)', () => {
+  const DRAWN = 'data:image/jpeg;base64,DRAWN'
+
+  /** Stand in for a playing 1280x960 camera stream on every `<video>`. */
+  function stubVideoAndCanvas() {
+    const videoProto = HTMLVideoElement.prototype as unknown as Record<string, unknown>
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    vi.spyOn(HTMLVideoElement.prototype, 'videoWidth', 'get').mockReturnValue(1280)
+    vi.spyOn(HTMLVideoElement.prototype, 'videoHeight', 'get').mockReturnValue(960)
+    const hadCallback = 'requestVideoFrameCallback' in videoProto
+    videoProto.requestVideoFrameCallback = (cb: () => void) => {
+      cb()
+      return 1
+    }
+    const drawImage = vi.fn()
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage,
+    } as unknown as CanvasRenderingContext2D)
+    const toDataURL = vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(DRAWN)
+    return {
+      drawImage,
+      toDataURL,
+      restore: () => {
+        if (!hadCallback) delete videoProto.requestVideoFrameCallback
+      },
+    }
+  }
+
+  it('a cold capture pays the sensor settle; a warm one draws at once, both at PkWebcamPanel parity', async () => {
+    const dom = stubVideoAndCanvas()
+    try {
+      const grabber = createVideoFrameGrabber(fakeStream().stream)
+      const cold = grabber.captureFrame({ warm: false })
+      await vi.advanceTimersByTimeAsync(DEFAULT_SETTLE_MS - 1)
+      expect(dom.drawImage).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(cold).resolves.toBe(DRAWN)
+      expect(dom.drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 640, 480)
+      expect(dom.toDataURL).toHaveBeenCalledWith('image/jpeg', 0.8)
+
+      await expect(grabber.captureFrame({ warm: true })).resolves.toBe(DRAWN)
+      expect(dom.drawImage).toHaveBeenCalledTimes(2)
+      grabber.close()
+    } finally {
+      dom.restore()
+    }
+  })
+
+  it('keeps no second copy of the draw sequence in cameraController.ts', () => {
+    const source = readFileSync(`${import.meta.dirname}/cameraController.ts`, 'utf8')
+    expect(source).toContain('drawVideoFrame(')
+    expect(source).not.toMatch(/\.drawImage\(|\.toDataURL\(|waitForPaintedFrame\(/)
+  })
+})
+
 describe('permanent preview (a host-owned, always-on view)', () => {
   it('captures from the host source, blinks the host view, and never opens a camera itself', async () => {
     const h = harness()
@@ -457,5 +568,21 @@ describe('permanent preview (a host-owned, always-on view)', () => {
     const result = await camera.capture('tc-1')
     expect(result).toBe(JSON.stringify({ error: 'Webcam not initialized' }))
     expect(camera.session('tc-1')!.phase).toBe('unavailable')
+  })
+
+  it('Stop while the host source is still producing the frame cancels at once', async () => {
+    const source = { isReady: () => true, captureFrame: vi.fn(() => new Promise<string | null>(() => {})) }
+    const camera = createCameraController(
+      { countdownSeconds: 0, permanentPreview: { source } },
+      harness().deps,
+    )
+    const abort = new AbortController()
+    const pending = camera.capture('tc-1', abort.signal)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(camera.session('tc-1')!.phase).toBe('loading')
+    abort.abort()
+    await vi.advanceTimersByTimeAsync(0)
+    await expect(pending).resolves.toBe(JSON.stringify({ error: CAPTURE_CANCELLED_ERROR }))
+    expect(camera.session('tc-1')!.phase).toBe('cancelled')
   })
 })

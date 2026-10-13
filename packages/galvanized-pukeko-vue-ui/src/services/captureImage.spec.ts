@@ -10,6 +10,7 @@ import {
   createOnDemandCaptureSource,
   createHttpSnapshotCaptureSource,
   captureFailureMessage,
+  drawVideoFrame,
   CAPTURE_IMAGE_FAILED_ERROR,
   type ImageCaptureSource,
 } from './captureImage'
@@ -590,6 +591,72 @@ describe('createOnDemandCaptureSource — waits for a painted frame', () => {
 
     await expect(pending).resolves.toBe(DATA_URL)
     expect(drawImage).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('drawVideoFrame — the one frame-drawing sequence (RC-35 review finding 4)', () => {
+  const DATA_URL = 'data:image/jpeg;base64,DRAWN'
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  /** A playing video stand-in that announces a painted frame immediately. */
+  function video(width: number, height: number) {
+    return {
+      videoWidth: width,
+      videoHeight: height,
+      requestVideoFrameCallback: (cb: () => void) => {
+        cb()
+        return 1
+      },
+    } as unknown as HTMLVideoElement
+  }
+
+  function stubCanvas() {
+    const drawImage = vi.fn()
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage,
+    } as unknown as CanvasRenderingContext2D)
+    const toDataURL = vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(DATA_URL)
+    return { drawImage, toDataURL }
+  }
+
+  it('downscales the longest edge to 640 and encodes JPEG at 0.8 by default', async () => {
+    const { drawImage, toDataURL } = stubCanvas()
+    const v = video(1280, 720)
+    await expect(drawVideoFrame(v)).resolves.toBe(DATA_URL)
+    expect(drawImage).toHaveBeenCalledWith(v, 0, 0, 640, 360)
+    expect(toDataURL).toHaveBeenCalledWith('image/jpeg', 0.8)
+  })
+
+  it('honours maxSize and quality', async () => {
+    const { drawImage, toDataURL } = stubCanvas()
+    const v = video(800, 600)
+    await drawVideoFrame(v, { maxSize: 400, quality: 0.5 })
+    expect(drawImage).toHaveBeenCalledWith(v, 0, 0, 400, 300)
+    expect(toDataURL).toHaveBeenCalledWith('image/jpeg', 0.5)
+  })
+
+  it('waits settleMs after the painted frame before drawing, and not at all by default', async () => {
+    vi.useFakeTimers()
+    const { drawImage } = stubCanvas()
+    const settled = drawVideoFrame(video(640, 480), { settleMs: 300 })
+    await vi.advanceTimersByTimeAsync(299)
+    expect(drawImage).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    await settled
+    expect(drawImage).toHaveBeenCalledTimes(1)
+
+    await drawVideoFrame(video(640, 480))
+    expect(drawImage).toHaveBeenCalledTimes(2)
+  })
+
+  it('resolves null when there is nothing to draw', async () => {
+    stubCanvas()
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    await expect(drawVideoFrame(video(640, 480))).resolves.toBeNull()
   })
 })
 

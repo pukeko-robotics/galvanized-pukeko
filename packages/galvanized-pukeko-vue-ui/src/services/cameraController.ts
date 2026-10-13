@@ -30,8 +30,8 @@ import {
   DEFAULT_SETTLE_MS,
   captureFailureMessage,
   captureImageResult,
+  drawVideoFrame,
   frameToEnvelope,
-  waitForPaintedFrame,
   webcamPanelCaptureSource,
   type ImageCaptureSource,
   type WebcamPanelLike,
@@ -274,16 +274,14 @@ export interface FrameGrabber {
   close(): void
 }
 
-/** Longest frame edge, matching PkWebcamPanel and the on-demand source. */
-const MAX_FRAME_EDGE = 640
-const JPEG_QUALITY = 0.8
-const METADATA_TIMEOUT_MS = 10_000
-
 /**
  * The default {@link FrameGrabber}: a muted, inline `<video>` element playing
  * the stream from the moment the camera opens. The visible in-Chat preview
  * attaches the same `MediaStream` to its own element; this one is the capture
  * surface, so a capture works whether or not any preview is mounted.
+ *
+ * The drawing itself is `drawVideoFrame`, shared with the on-demand source, so
+ * the two capture paths cannot drift apart on black-frame or scaling fixes.
  */
 export function createVideoFrameGrabber(stream: MediaStream): FrameGrabber {
   const video = document.createElement('video')
@@ -295,31 +293,10 @@ export function createVideoFrameGrabber(stream: MediaStream): FrameGrabber {
     .then(() => video.play())
     .catch(() => undefined)
   return {
-    async captureFrame({ warm }) {
-      if (video.videoWidth === 0) {
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('camera frame timeout')), METADATA_TIMEOUT_MS)
-          video.onloadedmetadata = () => {
-            clearTimeout(timer)
-            resolve()
-          }
-        })
-      }
-      await waitForPaintedFrame(video)
+    captureFrame({ warm }) {
       // A countdown already gave the sensor seconds to settle (D4 consequence 1);
       // an immediate shot still pays the settle RC-19 measured.
-      if (!warm) await new Promise((resolve) => setTimeout(resolve, DEFAULT_SETTLE_MS))
-      const scale = Math.min(1, MAX_FRAME_EDGE / Math.max(video.videoWidth, video.videoHeight))
-      const width = Math.round(video.videoWidth * scale)
-      const height = Math.round(video.videoHeight * scale)
-      if (width === 0 || height === 0) return null
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return null
-      ctx.drawImage(video, 0, 0, width, height)
-      return canvas.toDataURL('image/jpeg', JPEG_QUALITY)
+      return drawVideoFrame(video, { settleMs: warm ? 0 : DEFAULT_SETTLE_MS })
     },
     close() {
       video.srcObject = null
@@ -420,7 +397,8 @@ export interface CameraController {
   /**
    * Run one capture and resolve the frozen `capture_image` envelope string.
    * Never rejects. `id` is the tool-call id (one is generated when absent);
-   * `signal` aborts the countdown and releases the camera.
+   * `signal` cancels the capture at any stage (the permission prompt, the
+   * countdown, the frame draw) and releases the camera.
    */
   capture(id?: string, signal?: AbortSignal): Promise<string>
   /** Forget every session (new conversation). Does not stop a running one. */
@@ -453,6 +431,42 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
       reject(new CaptureAbortedError())
     }
     signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+/**
+ * Settle with `work`, or reject with a {@link CaptureAbortedError} the moment
+ * `signal` aborts, whichever comes first. This is how Stop reaches the two
+ * waits the capture does not control: the browser's permission prompt
+ * (`getUserMedia` cannot be cancelled) and the frame draw (its metadata and
+ * painted-frame waits can run for seconds on a stalled camera).
+ *
+ * The abandoned `work` keeps running; `onLate` receives a value it produces
+ * after the abort, so a camera the user allows after pressing Stop is released
+ * at once instead of being left open. A late rejection is swallowed here,
+ * because nobody is waiting on it any more.
+ */
+function raceAbort<T>(
+  work: Promise<T>,
+  signal: AbortSignal | undefined,
+  onLate?: (value: T) => void,
+): Promise<T> {
+  if (!signal) return work
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new CaptureAbortedError())
+    if (signal.aborted) onAbort()
+    else signal.addEventListener('abort', onAbort, { once: true })
+    work.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) onLate?.(value)
+        else resolve(value)
+      },
+      (err: unknown) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(err)
+      },
+    )
   })
 }
 
@@ -620,7 +634,14 @@ export function createCameraController(
     }
     shutter(session)
     session.phase = 'loading'
-    const envelope = await captureImageResult(preview.source)
+    let envelope: string
+    try {
+      // Stop is honoured while the host's source is still producing the frame.
+      envelope = await raceAbort(captureImageResult(preview.source), signal)
+    } catch (err) {
+      if (err instanceof CaptureAbortedError) return cancelled(session)
+      throw err
+    }
     // The host's camera yielded nothing: from the Chat's side that is the
     // camera being unreachable, so it gets the plain message (RC-20 refines).
     return settle(session, envelope, 'unavailable')
@@ -643,22 +664,27 @@ export function createCameraController(
         // getUserMedia below gives the authoritative one.
       }
     }
+    // A run stopped before the camera was asked for never raises the prompt.
+    if (signal?.aborted) return cancelled(session)
     session.phase = 'requesting'
     let stream: MediaStream
     try {
-      // Blocks on the browser's native permission prompt (D2): the turn waits.
-      stream = await devices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: false,
-      })
+      // Blocks on the browser's native permission prompt (D2): the turn waits,
+      // but Stop does not. The prompt itself cannot be withdrawn, so a stream
+      // granted after Stop is released the moment it arrives.
+      stream = await raceAbort(
+        devices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false,
+        }),
+        signal,
+        (late) => late.getTracks().forEach((track) => track.stop()),
+      )
     } catch (err) {
+      if (err instanceof CaptureAbortedError) return cancelled(session)
       return unavailable(session, captureFailureMessage(webcamStatusFromError(err)))
     }
     const stopTracks = () => stream.getTracks().forEach((track) => track.stop())
-    if (signal?.aborted) {
-      stopTracks()
-      return cancelled(session)
-    }
     session.access = 'granted'
     session.stream = markRaw(stream)
     session.streaming = true
@@ -668,7 +694,9 @@ export function createCameraController(
       await runCountdown(session, signal)
       shutter(session)
       session.phase = 'loading'
-      frame = await grabber.captureFrame({ warm: resolved.countdownSeconds > 0 })
+      // Stop during "Loading your photo" cancels now, not after the draw's
+      // metadata and painted-frame waits run out; `finally` releases the camera.
+      frame = await raceAbort(grabber.captureFrame({ warm: resolved.countdownSeconds > 0 }), signal)
     } catch (err) {
       if (signal?.aborted || (err as Error)?.name === 'AbortError') {
         return cancelled(session)

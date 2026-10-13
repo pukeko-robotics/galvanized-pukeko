@@ -53,6 +53,18 @@ describe('createCaptureImageFrontendTool (headless CopilotKit helper)', () => {
     expect(wrapper.get('[data-testid="pk-camera-photo"]').attributes('src')).toBe(JPEG_FRAME)
   })
 
+  it('the stock render reads a complete call with no result and no session as over (review finding 3)', () => {
+    const tool = createCaptureImageFrontendTool({ camera: createCameraController() })
+    const wrapper = mount(
+      defineComponent({
+        setup: () => () =>
+          h(tool.render as never, { name: 'capture_image', toolCallId: 'tc-gone', args: {}, status: 'complete' }),
+      }),
+    )
+    expect(wrapper.get('[data-testid="pk-camera-label"]').text()).toBe('Photo not taken')
+    expect(wrapper.find('.pk-camera-dot').exists()).toBe(false)
+  })
+
   it('the stock render shows the live session the handler started, keyed by tool-call id', async () => {
     const camera = createCameraController(
       { countdownSeconds: 1, toolCallLabel: 'Taking photo…' },

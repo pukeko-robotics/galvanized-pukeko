@@ -301,6 +301,75 @@ export async function waitForPaintedFrame(video: HTMLVideoElement): Promise<void
   })
 }
 
+/** Longest frame edge after downscale, matching PkWebcamPanel. */
+export const DEFAULT_MAX_FRAME_EDGE = 640
+
+/** JPEG quality of a drawn frame, matching PkWebcamPanel. */
+export const DEFAULT_JPEG_QUALITY = 0.8
+
+/** Longest we wait for a stream to report its dimensions. */
+const METADATA_TIMEOUT_MS = 10_000
+
+/** Options for {@link drawVideoFrame}. Every field defaults. */
+export interface DrawVideoFrameOptions {
+  /** Longest frame edge after downscale (default {@link DEFAULT_MAX_FRAME_EDGE}). */
+  maxSize?: number
+  /** JPEG quality 0..1 (default {@link DEFAULT_JPEG_QUALITY}). */
+  quality?: number
+  /** Sensor-settle wait after the first painted frame; 0 skips it (default 0). */
+  settleMs?: number
+}
+
+/**
+ * Draw one JPEG data URL from a `<video>` that is already playing a camera
+ * stream: wait for its dimensions, wait for a painted frame, let the sensor
+ * settle, downscale and encode. Resolves null when there is nothing to draw
+ * (zero dimensions, no 2d context); rejects when the dimensions never arrive.
+ *
+ * The one copy of this sequence. Both {@link createOnDemandCaptureSource} and
+ * the camera tool's streaming element (cameraController.ts) draw through it, so
+ * a black-frame or scaling fix (the RC-19 lineage) lands on every capture path
+ * at once rather than on whichever copy someone happened to open.
+ */
+export async function drawVideoFrame(
+  video: HTMLVideoElement,
+  opts: DrawVideoFrameOptions = {},
+): Promise<string | null> {
+  const maxSize = opts.maxSize ?? DEFAULT_MAX_FRAME_EDGE
+  const quality = opts.quality ?? DEFAULT_JPEG_QUALITY
+  const settleMs = opts.settleMs ?? 0
+  // Wait until the stream reports real dimensions (first decoded frame).
+  if (video.videoWidth === 0) {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('camera frame timeout')), METADATA_TIMEOUT_MS)
+      video.onloadedmetadata = () => {
+        clearTimeout(timer)
+        resolve()
+      }
+    })
+  }
+
+  // Dimensions are known; a frame is not yet guaranteed to exist. Wait for one to
+  // be painted, then let the sensor settle, or we encode pure black (RC-19).
+  await waitForPaintedFrame(video)
+  if (settleMs > 0) await new Promise((resolve) => setTimeout(resolve, settleMs))
+
+  let width = video.videoWidth
+  let height = video.videoHeight
+  if (width === 0 || height === 0) return null
+  const scale = Math.min(1, maxSize / Math.max(width, height))
+  width = Math.round(width * scale)
+  height = Math.round(height * scale)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.drawImage(video, 0, 0, width, height)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
 /**
  * A self-contained capture source for hosts with no visible webcam panel (e.g.
  * the headless chat): on each capture it opens `getUserMedia`, waits for the
@@ -325,8 +394,8 @@ export async function waitForPaintedFrame(video: HTMLVideoElement): Promise<void
  * was provably not refused.
  */
 export function createOnDemandCaptureSource(opts: OnDemandCaptureOptions = {}): ImageCaptureSource {
-  const maxSize = opts.maxSize ?? 640
-  const quality = opts.quality ?? 0.8
+  const maxSize = opts.maxSize ?? DEFAULT_MAX_FRAME_EDGE
+  const quality = opts.quality ?? DEFAULT_JPEG_QUALITY
   const settleMs = opts.settleMs ?? DEFAULT_SETTLE_MS
 
   /**
@@ -383,36 +452,7 @@ export function createOnDemandCaptureSource(opts: OnDemandCaptureOptions = {}): 
     try {
       video.srcObject = stream
       await video.play()
-      // Wait until the stream reports real dimensions (first decoded frame).
-      if (video.videoWidth === 0) {
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('camera frame timeout')), 10_000)
-          video.onloadedmetadata = () => {
-            clearTimeout(timer)
-            resolve()
-          }
-        })
-      }
-
-      // Dimensions are known; a frame is not yet guaranteed to exist. Wait for one to
-      // be painted, then let the sensor settle, or we encode pure black (RC-19).
-      await waitForPaintedFrame(video)
-      if (settleMs > 0) await new Promise((resolve) => setTimeout(resolve, settleMs))
-
-      let width = video.videoWidth
-      let height = video.videoHeight
-      if (width === 0 || height === 0) return null
-      const scale = Math.min(1, maxSize / Math.max(width, height))
-      width = Math.round(width * scale)
-      height = Math.round(height * scale)
-
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return null
-      ctx.drawImage(video, 0, 0, width, height)
-      return canvas.toDataURL('image/jpeg', quality)
+      return await drawVideoFrame(video, { maxSize, quality, settleMs })
     } catch (err) {
       // The camera OPENED, so nothing here is a permission or device problem
       // and the classifier must never see it: `play()` rejects

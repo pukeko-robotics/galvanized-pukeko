@@ -25,8 +25,12 @@ const camera = createCameraController({ renderToA2UI: true })
 
 // RC-19/RC-35: render a capture inline in the conversation — live view,
 // countdown, then the photo — instead of the generic renderer's raw
-// `{mimeType, data: <base64>}` blob. At module scope, not in setup: the PLAT-17
-// registry is not reactive, so it must be populated before any badge mounts.
+// `{mimeType, data: <base64>}` blob. This is a `<script setup>` block, so this
+// line and the controller above run once per CopilotApp instance, before its
+// template mounts any badge — which is what the non-reactive PLAT-17 registry
+// needs. The registry is global and the last registration wins, so mount one
+// CopilotApp per page: a second instance would re-point the display at its own
+// controller, and the first instance's captures would no longer be shown.
 registerCaptureImageToolDisplay({ camera })
 
 // PLAT-19: the headless A2UI render target. Defaults to the split `panel`

@@ -78,10 +78,13 @@ export function createStockCameraCaptureRender(camera: CameraController | null) 
   // `{ name, toolCallId, args, status, result }` as its props, re-rendering it
   // as the call moves InProgress → Executing → Complete. The live state comes
   // from the camera session, keyed by the same tool-call id the handler got.
-  return (props: { toolCallId: string; result?: string }): VNodeChild =>
+  return (props: { toolCallId: string; result?: string; status?: string }): VNodeChild =>
     h(PkCameraCapture, {
       toolCallId: props.toolCallId,
       result: props.result ?? null,
+      // CopilotKit's ToolCallStatus value; `complete` with no result is a call
+      // that ended without a photo, not one still in progress.
+      status: props.status ?? null,
       camera,
     })
 }

@@ -38,8 +38,17 @@ const props = withDefaults(
     camera?: CameraController | null
     /** `panel` = the A2UI-pane copy: no indicator row, no announcements. */
     placement?: 'chat' | 'panel'
+    /**
+     * The tool call's own status, as the surface reports it: `'pending' |
+     * 'complete'` from the headless part, `'inProgress' | 'executing' |
+     * 'complete'` from CopilotKit's stock render. Only `'complete'` is read: a
+     * call that finished (or was abandoned) with no result and no running
+     * session is over, not "Taking photo…". Omitted = not known, which keeps
+     * the in-progress reading until a result or a session says otherwise.
+     */
+    status?: string | null
   }>(),
-  { result: null, camera: null, placement: 'chat' },
+  { result: null, camera: null, placement: 'chat', status: null },
 )
 
 const config = computed(() => props.camera?.config ?? DEFAULT_CAMERA_TOOL_CONFIG)
@@ -64,7 +73,9 @@ const errorMessage = computed(() =>
   parsed.value.kind === 'error' ? parsed.value.message : (session.value?.detail ?? null),
 )
 
-const outcome = computed<'photo' | 'unavailable' | 'cancelled' | 'failed' | 'pending' | 'other'>(() => {
+const outcome = computed<
+  'photo' | 'unavailable' | 'cancelled' | 'failed' | 'ended' | 'pending' | 'other'
+>(() => {
   if (photoSrc.value) return 'photo'
   const phase = session.value?.phase
   if (phase === 'cancelled' || errorMessage.value === CAPTURE_CANCELLED_ERROR) return 'cancelled'
@@ -74,6 +85,11 @@ const outcome = computed<'photo' | 'unavailable' | 'cancelled' | 'failed' | 'pen
   // a camera that could not deliver, so the plain message stands in for it.
   if (parsed.value.kind === 'error') return 'unavailable'
   if (props.result != null && parsed.value.kind === 'unrecognised') return 'other'
+  // The call is over but left nothing to show: no result, and no session still
+  // running it (a stopped run, a call that errored before any tool message, a
+  // session held by another controller). Without this it would read
+  // "Taking photo…" with a running dot for ever.
+  if (props.status === 'complete' && !active.value) return 'ended'
   return 'pending'
 })
 
@@ -84,7 +100,7 @@ const headerLabel = computed(() => {
   if (outcome.value === 'photo') return 'Photo'
   if (outcome.value === 'unavailable') return 'Camera unavailable'
   if (outcome.value === 'cancelled') return 'Photo cancelled'
-  if (outcome.value === 'failed') return 'Photo not taken'
+  if (outcome.value === 'failed' || outcome.value === 'ended') return 'Photo not taken'
   if (outcome.value === 'other') return 'Camera result'
   return config.value.toolCallLabel
 })
@@ -238,6 +254,10 @@ const fallbackPart = computed(
         {{ errorMessage }}
       </details>
     </template>
+
+    <p v-else-if="outcome === 'ended'" class="pk-camera-message" data-testid="pk-camera-ended">
+      The photo was not taken.
+    </p>
 
     <ToolResultGeneric v-else-if="outcome === 'other'" :part="fallbackPart" />
   </div>
