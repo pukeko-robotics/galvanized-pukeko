@@ -67,6 +67,8 @@ const REMEDY = 'pnpm run vendor:adk';
 // direct input to this build rather than a dependency version.
 const SOURCE_DIRS = [
   'packages/galvanized-pukeko-vue-ui/src',
+  // The CopilotKit stylesheet entry (PLAT-58), aliased into the build like src/.
+  'packages/galvanized-pukeko-vue-ui/styles',
   'packages/galvanized-pukeko-web-client/src',
 ];
 const SOURCE_FILES = [
