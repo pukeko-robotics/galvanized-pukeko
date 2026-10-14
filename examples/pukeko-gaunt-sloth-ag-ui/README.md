@@ -67,6 +67,7 @@ this example and needs an `OPENAI_API_KEY`.
 |---|---|---|
 | unset, or `openai` | `.gsloth.config.json` | yes — `OPENAI_API_KEY` |
 | `ollama` | `.gsloth.config.ollama.json` | no — a local Ollama daemon |
+| `google-genai` | `.gsloth.config.google-genai.json` | yes — `GOOGLE_API_KEY` or `GEMINI_API_KEY` |
 
 ```bash
 # No API key: run against a local Ollama daemon

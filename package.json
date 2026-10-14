@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@gaunt-sloth/agent": "2.2.3",
+    "@langchain/google": "^0.2.10",
     "@langchain/ollama": "^1.3.0",
     "@langchain/openai": "^1.5.13",
     "@modelcontextprotocol/sdk": "^1.30.0",
