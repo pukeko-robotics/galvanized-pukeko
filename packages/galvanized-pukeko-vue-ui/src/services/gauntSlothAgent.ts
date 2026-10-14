@@ -24,9 +24,9 @@ import { HttpAgent } from '@ag-ui/client'
  * reads the getter, and a `#private` one throws outright — so the value must be
  * a module-level constant.
  *
- * WHY 1.0.0. It is the AG-UI level of the gaunt-sloth release this repo
- * targets: `@gaunt-sloth/agent@2.2.0` depends on `@ag-ui/core` and
- * `@ag-ui/encoder` at `^1.0.0`, so 1.0.0 is the lowest level a server built from
+ * WHY 1.0.1. It is the AG-UI level of the gaunt-sloth release this repo
+ * targets: `@gaunt-sloth/agent@2.2.3` depends on `@ag-ui/core` and
+ * `@ag-ui/encoder` at `^1.0.1`, so 1.0.1 is the lowest level a server built from
  * that release can be running. `gauntSlothAgent.spec.ts` asserts that
  * correspondence against the installed manifest, so bumping the gaunt-sloth pin
  * without revisiting this line fails the suite instead of drifting silently.
@@ -38,7 +38,7 @@ import { HttpAgent } from '@ag-ui/client'
  * from the stream. Against a gaunt-sloth server that speaks subagents, that
  * would be a silent downgrade.
  */
-export const GAUNT_SLOTH_AG_UI_MAX_VERSION = '1.0.0'
+export const GAUNT_SLOTH_AG_UI_MAX_VERSION = '1.0.1'
 
 /**
  * The `HttpAgent` every vue-ui surface constructs, so there is exactly ONE place

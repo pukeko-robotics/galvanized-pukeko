@@ -1,1 +1,0 @@
-import{t as e}from"./CoreApp-BGnO4PbL.js";import{G as t,T as n,g as r,l as i}from"./index-Ddd9q4M6.js";var a=r({__name:`App`,setup(r){return(r,a)=>(n(),i(t(e)))}});export{a as default};
