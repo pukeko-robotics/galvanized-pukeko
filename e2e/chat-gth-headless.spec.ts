@@ -85,7 +85,7 @@ test.describe('Chat Interface (Gaunt Sloth AG-UI, headless default, no ?ui)', ()
     // getUserMedia frame → {mimeType,data} envelope) and re-runs with the result
     // as a trailing tool message → the server resumes the suspended run → the
     // model answers from the image. Also RC-14's attach-gap proof for headless:
-    // the expanded ToolCallBadge must show the client-fulfilled result.
+    // the camera card in the transcript must show the client-fulfilled result.
     test('round-trips the shared capture_image client tool (interrupt → frame → resume)', async ({ page }) => {
         const input = page.locator('[data-testid="pk-headless-input"]');
         await input.click();
@@ -94,13 +94,15 @@ test.describe('Chat Interface (Gaunt Sloth AG-UI, headless default, no ?ui)', ()
         );
         await page.locator('[data-testid="pk-headless-send"]').click();
 
-        // The tool call surfaces as a badge in the transcript.
+        // The tool call surfaces in the transcript as the camera card (RC-35), which renders
+        // in place of the generic badge. The `placement-chat` class tells it apart from the
+        // live camera pane, which mounts the same component with `placement="panel"`.
         // 30 000 ms against a measured 3.6–5.3 s: deliberately the most generous margin in
         // this file, because a run that starts after ollama has evicted the model pays the
         // model LOAD inside this first turn. If this budget is ever the one that fires, warm
         // the model (as the QA-29 sweep harness does) rather than widening it further.
-        const badge = page.locator('.tool-call-badge', { hasText: 'capture_image' });
-        await expect(badge).toBeVisible({ timeout: 30000 });
+        const card = page.locator('[data-testid="pk-camera-capture"].placement-chat');
+        await expect(card).toBeVisible({ timeout: 30000 });
 
         // The agent RESUMES past the interrupt: a non-empty assistant text
         // follows the tool call (the model's description of the frame).
@@ -134,23 +136,19 @@ test.describe('Chat Interface (Gaunt Sloth AG-UI, headless default, no ?ui)', ()
             page.locator('[data-testid="pk-headless-assistant"] .text-part').last()
         ).not.toBeEmpty({ timeout: 45000 });
 
-        // Expanding the badge shows the client-fulfilled result — the image
-        // envelope produced by the fake camera (headless attach-gap closed).
+        // The camera card shows the captured frame uncollapsed, in place of the
+        // generic view's raw `{mimeType, data: <base64>}` JSON.
         //
-        // RC-19 registered CaptureImageResult.vue for this tool, so the result
-        // renders as an inline <img> of the frame instead of the generic view's
-        // raw `{mimeType, data: <base64>}` JSON. Assert on the image itself.
+        // Scoping to the chat card keeps the live camera pane elsewhere on the
+        // page from satisfying an image check that is about the tool call.
+        // Together with the accessible name, a missing image or a fall-through
+        // to the generic view fails this.
         //
-        // The `.tool-call-body` scope is load-bearing twice over: it proves the
-        // expand actually happened, and it keeps the live PkWebcamPanel preview
-        // elsewhere on the page from satisfying an image check that is supposed
-        // to be about the tool result. Together with the accessible name, an
-        // empty badge, a missing image, or a fall-through to the generic view
-        // all fail this.
-        await badge.locator('.tool-call-header').click();
-        const capturedFrame = badge
-            .locator('.tool-call-body')
-            .getByRole('img', { name: 'Captured camera frame' });
+        // The card takes its photo from the tool result when one is attached and
+        // otherwise from the live capture session, so this image alone no longer
+        // proves the result attached. The resume text above is what proves the
+        // frame reached the server; the attach itself is pinned at unit level.
+        const capturedFrame = card.getByRole('img', { name: 'Captured camera frame' });
         await expect(capturedFrame).toBeVisible({ timeout: 15000 });
 
         // And it carries the fake camera's real payload rather than a
