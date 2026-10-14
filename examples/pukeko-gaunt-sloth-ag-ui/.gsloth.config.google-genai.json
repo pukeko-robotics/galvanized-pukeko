@@ -1,0 +1,20 @@
+{
+  "llm": {
+    "type": "google-genai",
+    "model": "gemini-3.8-flash",
+    "temperature": 0.7
+  },
+  "builtInTools": ["show_a2ui_surface"],
+  "middleware": ["frontend-image-injection"],
+  "streamOutput": true,
+  "commands": {
+    "api": {
+      "port": 3000,
+      "cors": {
+        "allowOrigin": "http://localhost:5555",
+        "allowMethods": "POST, GET, OPTIONS",
+        "allowHeaders": "Content-Type, Accept"
+      }
+    }
+  }
+}
