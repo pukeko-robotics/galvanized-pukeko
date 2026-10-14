@@ -54,8 +54,14 @@ describe('vue-ui pins the CopilotKit stack for its hosts (PLAT-58)', () => {
     )
   })
 
-  it('keeps vue a peer, so the host and vue-ui share one Vue', () => {
+  /**
+   * Peer only. A dependency entry beside the peer lets a package manager install
+   * a nested Vue for vue-ui when the host's version falls outside its range, and
+   * two Vues break reactivity and provide/inject between host and library.
+   */
+  it('keeps vue a peer only, so the host and vue-ui share one Vue', () => {
     expect(manifest.peerDependencies?.vue).toBeTruthy()
+    expect(manifest.dependencies?.vue).toBeUndefined()
   })
 
   it('re-exports the CopilotKit pieces a host composes with, as the same objects', () => {
