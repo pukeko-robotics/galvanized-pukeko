@@ -1,0 +1,6 @@
+/*
+ * CopilotKit's own stylesheet, served from vue-ui so a host never names @copilotkit/vue.
+ * The import resolves against vue-ui's dependency, so it is always the CopilotKit
+ * version vue-ui was built and tested with.
+ */
+@import '@copilotkit/vue/styles.css';

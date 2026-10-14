@@ -16,7 +16,7 @@ async function resolveApp(mode: UiMode): Promise<Component> {
     }
     // CopilotKit's stylesheet + the /copilot bundle are only needed for the
     // CopilotKit-backed modes; load them lazily.
-    await import('@copilotkit/vue/styles.css')
+    await import('@galvanized-pukeko/vue-ui/copilotkit/style.css')
     await import('@galvanized-pukeko/vue-ui/copilot/style.css')
     return (await import('./CopilotApp.vue')).default
 }

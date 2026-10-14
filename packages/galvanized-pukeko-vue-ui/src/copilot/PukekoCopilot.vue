@@ -7,11 +7,10 @@
  *   - 'stock'    — CopilotKit's CopilotChat over our AG-UI backend.
  *   - 'headless' — bespoke Pukeko chat primitives driven by CopilotKit composables.
  *
- * The CopilotKit modes ('stock' / 'headless') pull in `@copilotkit/vue`, which
- * is declared as an *optional peer dependency* of this library and is only
- * imported by the `./copilot` sub-export — so apps that only use 'bespoke' never
- * pay for CopilotKit's dep tree. This shell lives in the `./copilot` entry, so
- * importing it already opts into that cost.
+ * The CopilotKit modes ('stock' / 'headless') pull in `@copilotkit/vue`, a
+ * dependency of this library that only the `./copilot` sub-export imports — so
+ * apps that only use 'bespoke' never load CopilotKit in their bundle. This shell
+ * lives in the `./copilot` entry, so importing it already opts into that cost.
  *
  * The wire stays AG-UI / HTTP-SSE in every mode (see PLAN.md): stock/headless
  * use CopilotKit's self-managed `HttpAgent` — never the CopilotKit cloud runtime.

@@ -91,6 +91,30 @@ const unregister = registerToolDisplay('capture_image', {
 This is the extension point used by the robot controller to render `capture_image` as an inline
 thumbnail and motion tools as before/after images (RC-14).
 
+## CopilotKit comes with vue-ui
+
+vue-ui depends on `@copilotkit/vue` and `@ag-ui/client` at exact versions it is tested with, so
+a host app installs only `@galvanized-pukeko/vue-ui` (and `vue`, which stays a peer: your own
+components and vue-ui's must share one Vue). Don't add `@copilotkit/vue` or `@ag-ui/*` to your
+own `package.json`: a second copy splits the app into two protocol implementations that do not
+recognise each other's agents.
+
+To compose your own layout around the chat, import the CopilotKit pieces from vue-ui:
+
+```ts
+import {
+  CopilotKitProvider,
+  HttpAgent,
+  HeadlessChat,
+  type VueFrontendTool,
+} from '@galvanized-pukeko/vue-ui/copilot'
+import '@galvanized-pukeko/vue-ui/copilotkit/style.css' // CopilotKit's own stylesheet
+import '@galvanized-pukeko/vue-ui/copilot/style.css'    // vue-ui's CopilotKit surfaces
+```
+
+`useAgent`, `useCopilotKit` and `useRenderTool` are re-exported too. If you need another
+CopilotKit export, add it to vue-ui's re-export list rather than importing CopilotKit directly.
+
 ## Services
 
 ### `configService`

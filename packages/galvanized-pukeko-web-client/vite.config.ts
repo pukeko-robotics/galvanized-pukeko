@@ -57,6 +57,9 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@galvanized-pukeko/vue-ui/style.css': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/assets/global.css', import.meta.url)),
+      // PLAT-58: CopilotKit's stylesheet as vue-ui serves it; the file is not
+      // under src/, and its @import resolves from vue-ui's own dependency.
+      '@galvanized-pukeko/vue-ui/copilotkit/style.css': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/styles/copilotkit.css', import.meta.url)),
       '@galvanized-pukeko/vue-ui/copilot/style.css': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/assets/global.css', import.meta.url)),
       '@galvanized-pukeko/vue-ui/copilot': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src/copilot.ts', import.meta.url)),
       '@galvanized-pukeko/vue-ui': fileURLToPath(new URL('../galvanized-pukeko-vue-ui/src', import.meta.url))

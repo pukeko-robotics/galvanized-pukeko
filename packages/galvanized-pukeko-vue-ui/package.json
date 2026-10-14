@@ -39,10 +39,12 @@
       "require": "./dist/copilot.cjs"
     },
     "./copilot/style.css": "./dist/copilot.css",
+    "./copilotkit/style.css": "./styles/copilotkit.css",
     "./style.css": "./dist/vue-ui.css"
   },
   "files": [
     "dist",
+    "styles",
     "LICENSE",
     "README.md"
   ],
@@ -62,18 +64,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ag-ui/client": "^1.0.1",
+    "@ag-ui/client": "1.0.1",
+    "@copilotkit/vue": "1.77.0",
     "chart.js": "^4.5.1",
     "vue": "^3.5.12"
   },
   "peerDependencies": {
-    "@copilotkit/vue": "^1.76.0",
     "vue": "^3.5.12"
-  },
-  "peerDependenciesMeta": {
-    "@copilotkit/vue": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@playwright/test": "1.61.0",

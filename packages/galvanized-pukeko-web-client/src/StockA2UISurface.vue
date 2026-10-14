@@ -23,7 +23,7 @@
  * briefs/copilotkit-vue/PLAN.md.
  */
 import { h, markRaw, reactive, type Raw } from 'vue'
-import { useRenderTool } from '@copilotkit/vue/v2'
+import { useRenderTool } from '@galvanized-pukeko/vue-ui/copilot'
 import { z } from 'zod'
 import { useA2UI, A2UISurface, parseA2UIJsonl } from '@galvanized-pukeko/vue-ui'
 

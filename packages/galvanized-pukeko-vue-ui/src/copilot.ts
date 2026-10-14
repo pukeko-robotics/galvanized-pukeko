@@ -2,9 +2,14 @@
  * `@galvanized-pukeko/vue-ui/copilot` — the CopilotKit-backed UI modes (P2b).
  *
  * Kept as a SEPARATE entry point from the library root (`index.ts`) so the core
- * bespoke library stays free of the `@copilotkit/vue` dependency tree. Apps opt
- * into CopilotKit only by importing from this sub-path. `@copilotkit/vue` is an
- * optional peer dependency of vue-ui (see package.json).
+ * bespoke library's bundle never loads `@copilotkit/vue`. Apps opt into CopilotKit
+ * only by importing from this sub-path.
+ *
+ * vue-ui owns the CopilotKit stack (PLAT-58): `@copilotkit/vue` and `@ag-ui/client`
+ * are exact-pinned dependencies of vue-ui, and the CopilotKit pieces a host needs
+ * are re-exported below, so a host app pins only vue-ui and cannot end up with a
+ * second copy of either. The two pins move together: CopilotKit pins `@ag-ui`
+ * exactly, and `copilotkitStack.spec.ts` fails if they disagree.
  *
  * The cross-repo wire stays AG-UI over HTTP/SSE in every mode — these modes use
  * CopilotKit's self-managed `HttpAgent`, never the CopilotKit cloud runtime.
@@ -24,6 +29,20 @@ export {
   A2UIRenderToolBridge,
   A2UIToolSurface,
 }
+
+// PLAT-58: the CopilotKit pieces a host composes with, from vue-ui's own copy, so
+// the host never imports `@copilotkit/vue` itself. A deliberate list rather than
+// `export *`: vue-ui's API should not grow every time CopilotKit's does. Add a
+// name here when a host needs it. The stylesheet is
+// `@galvanized-pukeko/vue-ui/copilotkit/style.css`.
+export {
+  CopilotKitProvider,
+  HttpAgent,
+  useAgent,
+  useCopilotKit,
+  useRenderTool,
+} from '@copilotkit/vue/v2'
+export type { VueFrontendTool } from '@copilotkit/vue/v2'
 export type { UiMode, A2UITarget } from './copilot/types'
 export { toBubbles } from './copilot/useHeadlessChat'
 export type { ChatBubble, AgentMessageLike, ContextFoldMarker } from './copilot/useHeadlessChat'
